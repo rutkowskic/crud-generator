@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use App\##singular|ucfirst##; 
+
+class ##singular|ucfirst##Controller extends Controller
+{
+    
+    public function index()
+    {
+        $##plural## = ##singular|ucfirst##::latest()->paginate(25);
+        return view('admin.##plural##.index', compact('##plural##'));
+    }
+
+    public function create()
+    {
+        return view('admin.##plural##.create');
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->all();
+        ##createFiles##
+        ##checkbox##
+        ##singular|ucfirst##::create($data);
+        return redirect('admin/##plural##')->with('flash_message', '##singular|ucfirst## added!');
+    }
+
+    public function show(##singular|ucfirst## $##singular##)
+    {
+        return view('admin.##plural##.show', compact('##singular##'));
+    }
+
+    public function edit($##singular##)
+    {
+        ##editModel##
+        ##relationModels##
+        return view('admin.##plural##.edit', compact('##singular##'##editCompact##));
+    }
+
+    public function update(Request $request, ##singular|ucfirst## $##singular##)
+    {
+        $data = $request->all();
+        ##updateFiles##
+        ##checkbox##
+        $##singular##->update($data);
+        return redirect('admin/##plural##')->with('flash_message', '##singular|ucfirst## updated!');
+    }
+
+    public function destroy(##singular|ucfirst## $##singular##)
+    {
+        ##deleteFiles##
+        $##singular##->delete();
+        return redirect('admin/##plural##')->with('flash_message', '##singular|ucfirst## deleted!');
+    }
+    
+    ##relations##
+}

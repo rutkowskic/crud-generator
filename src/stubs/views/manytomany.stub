@@ -1,0 +1,86 @@
+<button type="button" class="btn btn-success" data-toggle="modal" data-target="###relation|plural##-create">Create</button>
+<div class="modal fade" id="##relation|plural##-create" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Create ##relation|plural|ucfirst##</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{{ route('##plural##.create-##relation|singular##', ['##singular##' => $##singular##->id, '##relation|singular##' => $##relation|singular##->id]) }}">
+            @csrf
+            @method('PUT')
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <label class="input-group-text" for="##relation|plural##-select">##relation|singular|ucfirst##</label>
+                </div>
+                <select class="custom-select" id="##relation|plural##-select" name="##relation|singular##">
+                    @foreach($##relation|plural## as $##relation|singular##)
+                    <option value="{{$##relation|singular##->id}}">{{$##relation|selectProporties##}}</option>
+                    @endforeach
+                </select>
+            </div>
+            ##createRelationForm##
+            <button type="button" class="btn btn-primary">Create</button>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      ##relationth##
+      <th scope="col">Edit</th>
+      <th scope="col">Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach($##singular##->##relation|plural## as $##relation|singular##)
+    <tr>
+        <th scope="row">{{$loop->index + 1}}</th>
+        ##relationtd##
+        <td>
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="###relation|plural##-{{$lang->id}}">Edit</button>
+        </td>
+        <td>
+            @component('components.form_delete', [ 
+                'action' => route('##plural##.destroy-##relation|singular##', ['##singular##' => $##singular##->id, '##relation|singular##' => $##relation|singular##->id]) 
+            ]) 
+            @endcomponent
+        </td>
+    </tr>
+    @endforeach
+  </tbody>
+</table>
+@foreach($##singular##->##relation|plural## as $##relation|singular##)
+<div class="modal fade" id="##relation|plural##-{{$lang->id}}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">##relation|singular|ucfirst##</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{{ route('##plural##.update-##relation|singular##', ['##singular##' => $##singular##->id, '##relation|singular##' => $##relation|singular##->id]) }}">
+            @csrf
+            @method('PUT')
+            ##updateRelationForm##
+            <button type="button" class="btn btn-primary">Update</button>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+@endforeach

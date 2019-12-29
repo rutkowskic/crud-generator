@@ -1,0 +1,27 @@
+@extends('layouts.admin')
+
+@section('content')
+<h2>##plural|ucfirst##</h2>
+<a href="{{ route( '##plural##.create' ) }}" class="btn btn-success btn-lg btn-block">New</a>
+<br>
+    <table class="table">
+    <thead>
+        <tr>
+        <th scope="col">#</th>
+        ##thead##
+        <th scope="col">Edit/Delete</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($##plural## as $##singular##)
+        <tr>
+            <th scope="row">{{$loop->index + 1}}</th>
+            ##tbody##
+            <td>
+                <a href="{{ route( '##plural##.edit', ['id' => $##singular##->id] ) }}" class="btn btn-success">Edit</a>
+            </td>
+        </tr>
+        @endforeach
+    </tbody>
+    </table>
+@endsection

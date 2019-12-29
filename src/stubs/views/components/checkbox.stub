@@ -1,0 +1,4 @@
+<div class="custom-control custom-switch mt-3">
+    <input type="checkbox" class="custom-control-input" id="##component|singular##" name="##component|singular##" value="1" ##checked##>
+    <label class="custom-control-label" for="##component|singular##" name="##component|singular##">##component|singular|ucfirst##</label>
+</div>

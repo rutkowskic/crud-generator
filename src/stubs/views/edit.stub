@@ -1,0 +1,34 @@
+@extends('layouts.admin')
+
+@section('content')
+<div>
+  <div class="card">
+    <div class="card-header">
+      Edit
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ route('##plural##.update', ['id' => $##singular##->id]) }}" enctype="multipart/form-data">
+          @csrf
+          @method('PUT')
+          ##form##
+          <button class="btn btn-primary btn-block mt-4" type="submit">Update</button>
+        </form>
+    </div>
+  </div>
+  <br>
+  ##relations##
+  <br>
+  <div>
+    <form action="{{ route('##plural##.destroy', ['id' => $##singular##->id]) }}" method="post">
+        @csrf
+        @method('DELETE')
+        <button class="btn btn-danger btn-block" type="submit">Delete</button>
+    </form>
+  </div>
+</div>
+@endsection
+
+@section('scripts')
+##scripts##
+@endsection
+

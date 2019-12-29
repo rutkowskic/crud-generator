@@ -1,0 +1,3 @@
+if ($request->hasFile('##name##')) {
+    $data['##name##'] = $request->file('##name##')->store('##plural##');
+}

@@ -1,0 +1,4 @@
+<div class="custom-file">
+    <input type="file" class="custom-file-input" id="##component|singular##" name="##component|singular##" ##required##>
+    <label class="custom-file-label" for="##component|singular##">Choose file</label>
+</div>

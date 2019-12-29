@@ -1,0 +1,4 @@
+<div class="form-group">
+    <label for="##component|singular|ucfirst##">##component|singular|ucfirst##</label>
+    <textarea class="form-control" id="##component|singular##" placeholder="##component|singular|ucfirst##" rows="9" name="##component|singular##" ##required##>##component|value##</textarea>
+</div>

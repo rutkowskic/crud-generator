@@ -1,0 +1,3 @@
+if(!$request->has('##name##')){
+    $data['##name##'] = 0;
+}

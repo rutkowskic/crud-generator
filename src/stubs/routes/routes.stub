@@ -1,0 +1,10 @@
+Route::prefix('admin')->group(function () {
+    Route::group(['namespace' => 'Admin'], function () {
+        Route::get('/', function(){
+            return view('admin.dashboard');
+        })->name('dashboard');
+        ##routes##
+        ##relationRoutes##
+    });
+    Auth::routes();
+});

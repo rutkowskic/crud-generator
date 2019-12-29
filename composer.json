@@ -1,0 +1,20 @@
+{
+    "name": "rcoder/crudgenerator",
+    "description": "CRUD generator",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Rcoder\\CrudGenerator\\": "src"
+        }
+    },
+    "minimum-stability": "dev",
+    "require": {},
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Rcoder\\CrudGenerator\\CrudGeneratorServiceProvider"
+            ]
+        }
+    }
+}
