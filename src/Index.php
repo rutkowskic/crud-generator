@@ -67,6 +67,12 @@ class Index {
     }
 
     function saveIndexTemplate(){
+        if(!File::exists(resource_path('views/admin'))){
+            File::makeDirectory(resource_path('views/admin'));
+        }
+        if(!File::exists(resource_path('views/admin/' . $this->plural))){
+            File::makeDirectory(resource_path('views/admin/' . $this->plural));
+        }
         File::put( resource_path('views/admin/'.$this->plural.'/index.blade.php'), $this->createIndexTemplate());
     }
     

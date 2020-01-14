@@ -142,6 +142,9 @@ class Controller {
 
     public function saveController()
     {
+        if(!File::exists(app_path('Http/Controllers/Admin'))){
+            File::makeDirectory(app_path('Http/Controllers/Admin'));
+        }
         File::put(app_path('Http/Controllers/Admin/' . $this->singularUppercase . 'Controller.php'), $this->createController());
     }
 
