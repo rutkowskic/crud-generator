@@ -105,20 +105,6 @@ class Controller {
         return '';
     }
 
-    public function createCheckbox($path)
-    {
-        $template = '';
-        foreach($this->getFromFields($this->fields, 'type', 'checkbox') as ['name' => $name]){
-            $template .= $this->render(array(
-                '##plural##' => $this->plural,
-                '##singular##' => $this->singular,
-                '##name##' => Str::singular(strtolower($name))
-            ), $this->getStub($path));
-            $template .= "\n";
-        }
-        return $template;
-    }
-
     public function createController()
     {
         $controllerPath = __DIR__.'/stubs/controller/controller.stub';
@@ -135,16 +121,12 @@ class Controller {
             '##editModel##' => $this->createEditModel(),
             '##relationModels##' => $this->createRelationModels(),
             '##editCompact##' => $this->createEditCompact(),
-            '##relations##' => $this->createRelations(),
-            '##checkbox##' => $this->createCheckbox(__DIR__.'/stubs/controller/checkbox.stub')
+            '##relations##' => $this->createRelations()
         ), $controllerStub);
     }
 
     public function saveController()
     {
-        if(!File::exists(app_path('Http/Controllers/Admin'))){
-            File::makeDirectory(app_path('Http/Controllers/Admin'));
-        }
         File::put(app_path('Http/Controllers/Admin/' . $this->singularUppercase . 'Controller.php'), $this->createController());
     }
 

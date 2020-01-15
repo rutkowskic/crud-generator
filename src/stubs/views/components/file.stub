@@ -1,4 +1,4 @@
-<div class="custom-file">
-    <input type="file" class="custom-file-input" id="##component|singular##" name="##component|singular##" ##required##>
-    <label class="custom-file-label" for="##component|singular##">Choose file</label>
+<div class="form-group">
+    <label for="##component|singular##">##component|singular|ucfirst##</label>
+    <input type="file" id="##component|singular##" class="form-control-file" name="##component|singular##" value="{{ isset($##singular##->##component|singular##) ? $##singular##->##component|singular## : '' }}" ##required##>
 </div>

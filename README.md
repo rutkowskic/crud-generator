@@ -46,7 +46,7 @@ Create in resources/crud folder your model json files, example post.json
         },
         {
             "name": "published",
-            "type": "checkbox"
+            "type": "radio"
         }
     ]
 }

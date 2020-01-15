@@ -7,9 +7,9 @@
       Edit
     </div>
     <div class="card-body">
-        <form method="post" action="{{ route('##plural##.update', ['id' => $##singular##->id]) }}" enctype="multipart/form-data">
+        <form method="post" action="{{ route('##plural##.update', ['id' => $##singular##->id]) }}" accept-charset="UTF-8" enctype="multipart/form-data">
           @csrf
-          @method('PUT')
+          @method('PATCH')
           ##form##
           <button class="btn btn-primary btn-block mt-4" type="submit">Update</button>
         </form>

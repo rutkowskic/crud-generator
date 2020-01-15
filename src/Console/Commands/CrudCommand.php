@@ -49,6 +49,14 @@ class CrudCommand extends Command
     {
         $jsons = [];
 
+        if(!File::exists( resource_path('views/admin') )){
+            File::makeDirectory(resource_path('views/admin'));
+        }
+
+        if(!File::exists(app_path('Http/Controllers/Admin'))){
+            File::makeDirectory(app_path('Http/Controllers/Admin'));
+        }
+
         $folderContents = scandir( config('crud.jsons') );
         $files = array_diff($folderContents, array('.', '..'));
         foreach( $files as $file) {

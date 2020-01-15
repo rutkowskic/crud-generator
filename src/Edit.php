@@ -108,18 +108,6 @@ class Edit {
         return $relations;
     }
 
-    function createCheckedCondition($field){
-        
-        ['name' => $name, 'type' => $type] = $field;
-        
-        if($type === 'checkbox')
-        {
-            return "{{\$".$this->singular."->" . Str::singular(strtolower($name)) . " ? 'checked' : ''}}";
-        }
-
-        return '';
-    }
-
     function createWyswigScripts()
     {
         $scripts = '';
@@ -155,9 +143,7 @@ class Edit {
                 '##singular##' => $this->singular,
                 '##component|singular##' => Str::singular(strtolower($field['name'])),
                 '##component|singular|ucfirst##' => Str::singular(ucfirst($field['name'])),
-                '##component|value##' =>  '{{$' . $this->singular . '->' . Str::singular(strtolower($field['name'])) . '}}',
-                '##required##' => "",
-                "##checked##" => $this->createCheckedCondition($field)
+                '##required##' => Arr::get($field, 'required', false) ? 'required' : '',
             ), $stub);
 
             $form .= "\n";

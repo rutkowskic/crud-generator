@@ -66,9 +66,7 @@ class Create {
                 '##singular##' => $this->singular,
                 '##component|singular##' => Str::singular(strtolower($field['name'])),
                 '##component|singular|ucfirst##' => Str::singular(ucfirst($field['name'])),
-                '##component|value##' =>  "",
-                '##required##' => Arr::get($field, 'required', false),
-                '##checked##' => ""
+                '##required##' => Arr::get($field, 'required', false) ? 'required' : '',
             ), $stub);
 
             $form .= "\n";

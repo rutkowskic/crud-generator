@@ -1,4 +1,4 @@
 <div class="form-group">
     <label for="##component|singular##">##component|singular|ucfirst##</label>
-    <input type="text" class="form-control" id="##component|singular##" placeholder="##component|singular|ucfirst##" value="##component|value##" name="##component|singular##" ##required##>
+    <input type="text" id="##component|singular##" class="form-control" name="##component|singular##" value="{{ isset($##singular##->##component|singular##) ? $##singular##->##component|singular## : '' }}" ##required##>
 </div>

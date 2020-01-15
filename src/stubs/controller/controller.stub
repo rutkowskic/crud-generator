@@ -25,7 +25,6 @@ class ##singular|ucfirst##Controller extends Controller
     {
         $data = $request->all();
         ##createFiles##
-        ##checkbox##
         ##singular|ucfirst##::create($data);
         return redirect('admin/##plural##')->with('flash_message', '##singular|ucfirst## added!');
     }
@@ -46,7 +45,6 @@ class ##singular|ucfirst##Controller extends Controller
     {
         $data = $request->all();
         ##updateFiles##
-        ##checkbox##
         $##singular##->update($data);
         return redirect('admin/##plural##')->with('flash_message', '##singular|ucfirst## updated!');
     }
