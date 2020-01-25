@@ -1,11 +1,11 @@
-public function attach##relation|singular|ucfirst##(Request $request, ##singular|ucfirst## $##singular##, $##relation|singular##)
+public function attach##relation|singular|ucfirst##(Request $request, ##singular|ucfirst## $##singular##)
 {
-    $##singular##->##relation|plural##()->attach($##relation|singular##, $request->all());
+    $##singular##->##relation|plural##()->attach($request->##relation|singular####relation|fields##);
     return back()->with('flash_message', '##relation|singular|ucfirst## attached!');
 }
 public function update##relation|singular|ucfirst##(Request $request, ##singular|ucfirst## $##singular##, $##relation|singular##)
 {
-    $##singular##->##relation|plural##()->updateExistingPivot($##relation|singular##, $request->all());
+    $##singular##->##relation|plural##()->updateExistingPivot($##relation|singular####relation|fields##);
     return back()->with('flash_message', '##relation|singular|ucfirst## updated!');
 }
 public function detach##relation|singular|ucfirst##(Request $request, ##singular|ucfirst## $##singular##, $##relation|singular##)

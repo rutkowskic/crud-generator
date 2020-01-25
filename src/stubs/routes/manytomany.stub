@@ -1,3 +1,3 @@
-Route::post('##plural##/{##singular##}/##relation|plural##/{##relation|singular##}', '##singular|ucfirst##Controller@attach##relation|singular|ucfirst##')->name('##plural##.attach-##relation|singular##');
-Route::post('##plural##/{##singular##}/##relation|plural##/{##relation|singular##}', '##singular|ucfirst##Controller@update##relation|singular|ucfirst##')->name('##plural##.update-##relation|singular##');
+Route::post('##plural##/{##singular##}/##relation|plural##', '##singular|ucfirst##Controller@attach##relation|singular|ucfirst##')->name('##plural##.attach-##relation|singular##');
+Route::put('##plural##/{##singular##}/##relation|plural##/{##relation|singular##}', '##singular|ucfirst##Controller@update##relation|singular|ucfirst##')->name('##plural##.update-##relation|singular##');
 Route::delete('##plural##/{##singular##}/##relation|plural##/{##relation|singular##}', '##singular|ucfirst##Controller@detach##relation|singular|ucfirst##')->name('##plural##.detach-##relation|singular##');

@@ -37,6 +37,11 @@ class Index {
     function createTbodys(){
         $tbodys = "";
 
+        if(array_key_exists('index', $this->json)){
+            $where = explode("|", $this->json['index']['where']);
+            $tbodys .= "<td scope=\"row\">{{isset(\$".$this->singular."->".Str::plural(strtolower($where[0]))."->where('".Str::singular(strtolower($where[1]))."', '".Str::singular(strtolower($where[2]))."')->first()->pivot) ? \$".$this->singular."->".Str::plural(strtolower($where[0]))."->where('".Str::singular(strtolower($where[1]))."', '".Str::singular(strtolower($where[2]))."')->first()->pivot->".$this->json['index']['name']." : ''}}</th>";
+        }
+
         foreach($this->getWhenKeyIsBool($this->fields, 'active') as $active){
             $tbodys .= "<td scope='row'>{{\$". $this->singular ."->". Str::singular(strtolower($active['name'])) ."}}</td>\n";
         }
@@ -46,6 +51,10 @@ class Index {
 
     function createTheads(){
         $theads = "";
+
+        if(array_key_exists('index', $this->json)){
+            $theads .= "<th scope=\"col\">".ucfirst($this->json['index']['name'])."</th>";
+        }
 
         foreach($this->getWhenKeyIsBool($this->fields, 'active') as $active){
             $theads .= "<th scope='col'>" . Str::singular(ucfirst($active['name'])) . "</th>\n";

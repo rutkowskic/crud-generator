@@ -37,31 +37,37 @@ class Edit {
     function createSelectProporties($relation)
     {
         ['model' => $model, 'select' => $select] = $relation;
-
-        if(array_key_exists("table" , $select) && array_key_exists("where" , $select)){
-            return Str::singular(strtolower($model)) . "->pivot->" . $select['name'];
+        if(array_key_exists("where" , $select)){
+            $where = explode("|", $select['where']);
+            return "\$".Str::singular(strtolower($model))."->".$where[0]."->where('".$where[1]."', '".$where[2]."')->first()->pivot->".$select['name'];
         }
-        return Str::singular(strtolower($model)) . "->" .  $select['name'];
+        return "\$".Str::singular(strtolower($model)) . "->" .  $select['name'];
     }
 
     function createRelationForm($relation, $type)
     {
-        ['model' => $relationModel, 'fields' => $relationFields] = $relation;
-
+        
         $form = '';
+        
+        if(array_key_exists('fields', $relation)){
+            ['model' => $relationModel, 'fields' => $relationFields] = $relation;
+            foreach($relationFields as ['name' => $fieldName, 'type' => $fieldType]){
+    
+                $path = __DIR__ .'/stubs/views/components/'.$fieldType.'.stub';
+                $value = "{{ isset($" . Str::singular($relationModel) . "->pivot->" . Str::singular($fieldName) . ") ? $". Str::singular($relationModel) . "->pivot->". Str::singular($fieldName) . ": '' }}";
+                $stub = $this->getStub($path);
+    
+                $form .= $this->render(array(
+                    "##component|singular##" => Str::singular(strtolower($fieldName)),
+                    "##component|plural|ucfirst##" => Str::plural(ucfirst($fieldName)),
+                    '##component|singular|ucfirst##' => Str::singular(ucfirst($fieldName)),
+                    "##component|value##" => $fieldType == 'textarea' ? $value : "value=\"{$value}\"",
+                    '##required##' => ''
+                ), $stub);
+    
+                $form .= "\n";
+            }
 
-        foreach($relationFields as ['name' => $fieldName, 'type' => $fieldType]){
-
-            $stub = __DIR__ .'/stubs/views/components/'.$fieldType.'.stub';
-
-            $form .= $this->render(array(
-                "##component|singular##" => Str::singular(strtolower($fieldName)),
-                "##component|plural|ucfirst##" => Str::plural(ucfirst($fieldName)),
-                '##component|singular|ucfirst##' => Str::singular(ucfirst($fieldName)),
-                "##component|value##" => $type === 'create' ? "''" : '$'. Str::singular($relationModel) . '->pivot->' . Str::singular($fieldName)
-            ), $stub);
-
-            $form .= "\n";
         }
 
         return $form;
@@ -81,15 +87,33 @@ class Edit {
         return ['theads' => $theads, 'tbodys' => $tbodys];
     }
 
+    function createRelationTd($relation)
+    {
+        ['model' => $model, 'select' => $select] = $relation;
+        if(array_key_exists("where" , $select)){
+            $where = explode("|", $select['where']);
+            return "<td scope='col'>{{\$".Str::singular(strtolower($model))."->".$where[0]."->where('".$where[1]."', '".$where[2]."')->first()->pivot->".$select['name'] ."}}</td>\n";
+        }
+        return "<td scope='col'>{{\$". Str::singular(strtolower($relation['model'])) ."->". Str::singular(strtolower($relation['select']['name'])) ."}}</td>\n"; 
+    }
+
+    function relationEditBUtton($relation)
+    {
+        if(array_key_exists('fields', $relation)){
+            return "<button type=\"button\" class=\"btn btn-primary btn-sm\" data-toggle=\"modal\" data-target=\"#".Str::plural(strtolower($relation['model']))."-{{\$".Str::singular(strtolower($relation['model']))."->id}}\">Edit</button>";
+        }
+        return '';
+    }
+
     function createRelations()
     {
         $relations = '';
         if(array_key_exists("relations", $this->json)){
             foreach ($this->json['relations'] as $relation) {
+                $path = __DIR__ .'/stubs/views/'.$relation['type'].'.stub';
 
-                ['theads' => $theads, 'tbodys' => $tbodys] = $this->createPivotTableElements($relation);
+                $stub = $this->getStub($path);
 
-                $stub = __DIR__ .'/stubs/views/'.$relation['type'].'.stub';
                 $relations .= $this->render(array(
                     '##singular##' => $this->singular,
                     "##plural##" => $this->plural,
@@ -97,8 +121,9 @@ class Edit {
                     '##relation|plural##' => Str::plural(strtolower($relation['model'])),
                     '##relation|singular|ucfirst##' => Str::singular(ucfirst($relation['model'])),
                     '##relation|plural|ucfirst##' => Str::plural(ucfirst($relation['model'])),
-                    '##relationtd##' => $tbodys,
-                    '##relationth##' => $theads,
+                    '##relationth##' => "<th scope='row'>" . Str::singular(ucfirst($relation['select']['name'])) . "</th>\n",
+                    '##relationtd##' => $this->createRelationTd($relation),
+                    '##relationEdit##' => $this->relationEditButton($relation),
                     '##createRelationForm##' => $this->createRelationForm($relation, 'create'),
                     '##updateRelationForm##' => $this->createRelationForm($relation, 'update'),
                     '##relation|selectProporties##' => $this->createSelectProporties($relation)
@@ -136,14 +161,26 @@ class Edit {
 
         foreach ($this->fields as $field) {
             $path = __DIR__ .'/stubs/views/components/'.$field['type'].'.stub';
-
+            $value;
             $stub = $this->getStub($path);
+
+            switch ($field['type']) {
+                case "number":
+                    $value = "value={{\$". $this->singular ."->". Str::singular(strtolower($field['name'])) . " ?? 0}}";
+                    break;
+                case "textarea":
+                    $value = "{{\$". $this->singular ."->". Str::singular(strtolower($field['name'])) . " ?? \"\"}}";
+                    break;
+                default:
+                    $value = "value={{\$". $this->singular ."->". Str::singular(strtolower($field['name'])) . " ?? \"\"}}";
+            }
 
             $form .= $this->render(array(
                 '##singular##' => $this->singular,
                 '##component|singular##' => Str::singular(strtolower($field['name'])),
                 '##component|singular|ucfirst##' => Str::singular(ucfirst($field['name'])),
-                '##required##' => Arr::get($field, 'required', false) ? 'required' : '',
+                '##component|value##' => $value,
+                '##required##' => Arr::get($field, 'required', false) ? 'required' : ''
             ), $stub);
 
             $form .= "\n";

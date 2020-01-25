@@ -15,9 +15,7 @@
         </form>
     </div>
   </div>
-  <br>
   ##relations##
-  <br>
   <div>
     <form action="{{ route('##plural##.destroy', ['id' => $##singular##->id]) }}" method="post">
         @csrf

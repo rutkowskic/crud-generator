@@ -27,18 +27,28 @@ class Controller {
     {
         ['model' => $model, 'fields' => $fields] = $json;
         $this->json = $json;
-        $this->singular = Str::singular(strtolower($model));
-        $this->singularUppercase = Str::singular(ucfirst($model));
-        $this->plural = Str::plural(strtolower($model)); 
-        $this->pluralUppercase = Str::plural(ucfirst($model));
+        $this->singular = Str::singular(strtolower($model)); //post
+        $this->singularUppercase = Str::singular(ucfirst($model)); //Post
+        $this->plural = Str::plural(strtolower($model)); //posts
+        $this->pluralUppercase = Str::plural(ucfirst($model)); //Posts
         $this->fields = $fields;
+    }
+
+    public function relationFields($relation)
+    {
+        if(array_key_exists("fields", $relation)){
+            $namesOfFields = array_column($relation['fields'], 'name');
+            return ", \$request->only('". implode("', '", $namesOfFields) ."')";
+        }
+        return "";
     }
 
     public function createRelations()
     {
        $relations = '';
        if(array_key_exists("relations", $this->json)){
-           foreach($this->json['relations'] as ['model' => $model, 'type' => $type]){
+           foreach($this->json['relations'] as $relation){
+            ['model' => $model, 'type' => $type] = $relation;
                $path = __DIR__.'/stubs/controller/'.$type.'.stub';
                $stub = $this->getStub($path); 
                $relations .= $this->render(array(
@@ -48,7 +58,8 @@ class Controller {
                    '##singular|ucfirst##' => $this->singularUppercase,
                    "##relation|singular##" => Str::singular($model),
                    "##relation|singular|ucfirst##" => Str::singular(ucfirst($model)),
-                   "##relation|plural##" => Str::plural(strtolower($model))
+                   "##relation|plural##" => Str::plural(strtolower($model)),
+                   '##relation|fields##' => $this->relationFields($relation)
                ), $stub);
                $relations .= "\n";
            }
@@ -60,11 +71,26 @@ class Controller {
     {
         $relations = '';
         if(array_key_exists("relations", $this->json)){
-            foreach($this->json['relations'] as ['model' => $model]){
-                $relations .= "$".Str::plural(strtolower($model))." = ".$this->singularUppercase."::all();\n";
+            foreach($this->json['relations'] as ['model' => $model, 'select' => $select]){
+                if(array_key_exists("where", $select)){
+                    $with = explode("|", $select['where']);
+                    return $relations .= "$".Str::plural(strtolower($model))." = ".Str::singular(ucfirst($model))."::with('". Str::plural(strtolower($with[0])) ."')->get();\n";
+                }
+                $relations .= "$".Str::plural(strtolower($model))." = ".Str::singular(ucfirst($model))."::all();\n";
             }
         }
         return $relations;
+    }
+
+    public function createImportModels()
+    {
+        $imports = '';
+        if(array_key_exists("relations", $this->json)){
+            foreach($this->json['relations'] as ['model' => $model]){
+                $imports .= "use App\\".Str::singular(ucfirst($model)).";\n";                
+            }
+        }
+        return $imports;
     }
 
     function createEditModel()
@@ -105,6 +131,15 @@ class Controller {
         return '';
     }
 
+    public function createIndexModel()
+    {
+        if(array_key_exists('index', $this->json)){
+            $where = explode("|", $this->json['index']['where']);
+            return "\$".$this->plural." = ".$this->singularUppercase."::with('".Str::plural(strtolower($where[0]))."')->latest()->paginate(25);";
+        }
+        return "\$".$this->plural." = ".$this->singularUppercase."::latest()->paginate(25);";
+    }
+
     public function createController()
     {
         $controllerPath = __DIR__.'/stubs/controller/controller.stub';
@@ -115,10 +150,12 @@ class Controller {
             '##singular##' => $this->singular,
             '##plural|ucfirst##' => $this->pluralUppercase,
             '##singular|ucfirst##' => $this->singularUppercase,
+            '##indexModel##' => $this->createIndexModel(),
             '##createFiles##' => $this->filesTemplate(__DIR__.'/stubs/controller/createfile.stub'),
             '##updateFiles##' => $this->filesTemplate(__DIR__.'/stubs/controller/updatefile.stub'),
             '##deleteFiles##' => $this->filesTemplate(__DIR__.'/stubs/controller/deletefile.stub'),
             '##editModel##' => $this->createEditModel(),
+            '##importModels##' => $this->createImportModels(),
             '##relationModels##' => $this->createRelationModels(),
             '##editCompact##' => $this->createEditCompact(),
             '##relations##' => $this->createRelations()

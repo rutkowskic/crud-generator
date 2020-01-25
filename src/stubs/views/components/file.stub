@@ -1,4 +1,4 @@
 <div class="form-group">
     <label for="##component|singular##">##component|singular|ucfirst##</label>
-    <input type="file" id="##component|singular##" class="form-control-file" name="##component|singular##" value="{{ isset($##singular##->##component|singular##) ? $##singular##->##component|singular## : '' }}" ##required##>
+    <input type="file" id="##component|singular##" class="form-control-file" name="##component|singular##" ##component|value## ##required##>
 </div>

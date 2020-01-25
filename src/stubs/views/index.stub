@@ -9,6 +9,7 @@
         <tr>
         <th scope="col">#</th>
         ##thead##
+        <th scope="col">Created at</th>
         <th scope="col">Edit/Delete</th>
         </tr>
     </thead>
@@ -17,6 +18,7 @@
         <tr>
             <th scope="row">{{$loop->index + 1}}</th>
             ##tbody##
+            <td scope="row">{{$##singular##->created_at}}</th>
             <td>
                 <a href="{{ route( '##plural##.edit', ['id' => $##singular##->id] ) }}" class="btn btn-success">Edit</a>
             </td>

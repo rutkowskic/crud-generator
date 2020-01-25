@@ -26,6 +26,10 @@ Create in resources/crud folder your model json files, example post.json
 ```json
 {
     "model": "posts",
+    "index": {
+        "name": "title",
+        "where": "langs|code|en"
+    },
     "fields": [
         {
             "name": "title",
@@ -47,6 +51,29 @@ Create in resources/crud folder your model json files, example post.json
         {
             "name": "published",
             "type": "radio"
+        }
+    ],
+    "relations":[
+        {
+            "model": "langs",
+            "type": "manytomany",
+            "select": {
+                "name": "code"
+            },
+            "fields": [
+                {
+                    "name": "title",
+                    "type": "text"
+                }
+            ]
+        },
+        {
+            "model": "categories",
+            "type": "manytomany",
+            "select": {
+                "name": "title",
+                "where": "langs|code|pl"
+            }
         }
     ]
 }

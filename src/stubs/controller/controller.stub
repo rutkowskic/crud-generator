@@ -5,14 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\##singular|ucfirst##; 
+use App\##singular|ucfirst##;
+##importModels##
 
 class ##singular|ucfirst##Controller extends Controller
 {
     
     public function index()
     {
-        $##plural## = ##singular|ucfirst##::latest()->paginate(25);
+        ##indexModel##
         return view('admin.##plural##.index', compact('##plural##'));
     }
 
