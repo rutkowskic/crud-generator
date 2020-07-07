@@ -45,6 +45,9 @@ class Layout
     
     function saveAdminLayout()
     {
+        if(!File::exists(resource_path('views/layouts'))){
+            File::makeDirectory(resource_path('views/layouts'));
+        }
         File::put( resource_path('views/layouts/admin.blade.php'), $this->createAdminLayout() );
     }
 
