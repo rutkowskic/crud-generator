@@ -2,19 +2,22 @@
 
 namespace Rcoder\CrudGenerator\Console\Commands;
 
-use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
-
-use Rcoder\CrudGenerator\Controller;
-use Rcoder\CrudGenerator\Folders;
-use Rcoder\CrudGenerator\Index;
-use Rcoder\CrudGenerator\Create;
 use Rcoder\CrudGenerator\Edit;
+use Illuminate\Console\Command;
+
+use Rcoder\CrudGenerator\Index;
+use Rcoder\CrudGenerator\Stubs;
+use Rcoder\CrudGenerator\Create;
+use Rcoder\CrudGenerator\Helpers;
 use Rcoder\CrudGenerator\Layout;
 use Rcoder\CrudGenerator\Router;
+use Rcoder\CrudGenerator\Folders;
+use Illuminate\Support\Facades\File;
+use Rcoder\CrudGenerator\Controller;
 
 class CrudCommand extends Command
 {
+    
     /**
      * The name and signature of the console command.
      *
@@ -49,13 +52,8 @@ class CrudCommand extends Command
     {
         $jsons = [];
 
-        if(!File::exists( resource_path('views/admin') )){
-            File::makeDirectory(resource_path('views/admin'));
-        }
-
-        if(!File::exists(app_path('Http/Controllers/Admin'))){
-            File::makeDirectory(app_path('Http/Controllers/Admin'));
-        }
+        Helpers::makeDirectory(resource_path('views/admin'));
+        Helpers::makeDirectory(app_path('Http/Controllers/Admin'));
 
         $folderContents = scandir( config('crud.jsons') );
         $files = array_diff($folderContents, array('.', '..'));
@@ -64,19 +62,12 @@ class CrudCommand extends Command
             array_push($jsons, json_decode($model, true) ); 
         };
         foreach( $jsons as $json) {
-            $controller = new Controller($json);
-            $controller->init();
-            $index = new Index($json);
-            $index->init();
-            $create = new Create($json);
-            $create->init();
-            $edit = new Edit($json);
-            $edit->init();
+            Index::init($json);
+            Controller::init($json);
+            Create::init($json);
+            Edit::init($json);
         };
-        
-        $Layout = new Layout($jsons);
-        $Layout->init();
-        $router = new Router($jsons);
-        $router->init();
+        Layout::init($jsons);
+        Router::init($jsons);
     }
 }

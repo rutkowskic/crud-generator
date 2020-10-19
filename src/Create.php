@@ -2,43 +2,21 @@
 
 namespace Rcoder\CrudGenerator;
 
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
+use Rcoder\CrudGenerator\Stubs;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Rcoder\CrudGenerator\Helpers;
+use Illuminate\Support\Facades\File;
 
 class Create {
 
-    use Helpers;
-    
-    private $json;
+    use Stubs;
 
-    private $singular;
-    
-    private $singularUppercase;
-    
-    private $plural;
-    
-    private $pluralUppercase;
-
-    private $fields;
-    
-    function __construct($json) 
-    {
-        ['model' => $model, 'fields' => $fields] = $json;
-        $this->json = $json;
-        $this->singular = Str::singular(strtolower($model));
-        $this->singularUppercase = Str::singular(ucfirst($model));
-        $this->plural = Str::plural(strtolower($model));
-        $this->pluralUppercase = Str::plural(ucfirst($model));
-        $this->fields = $fields;
-    }
-
-    function createWyswigScripts()
+    static function createWyswigScripts($fields)
     {
         $scripts = '';
 
-        $objectsWhichNeedScript = $this->getWhenKeyIsBool($this->fields, "wyswig");
+        $objectsWhichNeedScript = Helpers::getWhenKeyIsTrue($fields, "wyswig");
 
         if(!empty($objectsWhichNeedScript))
         {
@@ -56,42 +34,55 @@ class Create {
         return $scripts;
     }
 
-    function createForm()
+    static function createForm($singular, $fields)
     {
         $form = '';
 
-        foreach ($this->fields as $field) {
-            $stub = $this->getStub(__DIR__ .'/stubs/views/components/'.$field['type'].'.stub');
-            $form .= $this->render(array(
-                '##singular##' => $this->singular,
-                '##component|singular##' => Str::singular(strtolower($field['name'])),
-                '##component|singular|ucfirst##' => Str::singular(ucfirst($field['name'])),
-                '##required##' => Arr::get($field, 'required', false) ? 'required' : '',
-            ), $stub);
-
+        foreach ($fields as $field) {
+            $componentSingular = Str::singular(strtolower($field['name']));
+            $componentSingularUCFirst = Str::singular(ucfirst($field['name']));
+            $componentValue = '';
+            $required = Arr::get($field, 'required', false) ? 'required' : '';
+            $form .= self::{$field['type']}($singular, $componentSingular, $componentSingularUCFirst, $componentValue, $required);
             $form .= "\n";
         }
 
-        return $form;
+        return rtrim($form, "\n");
     }
+    
+    static public function init($json)
+    {
+        $singular = Str::singular(strtolower($json['model'])); //post
+        $plural = Str::plural(strtolower($json['model'])); //posts
+        $singularUCFirst = Str::singular(ucfirst($json['model'])); //Post
+        $pluralUCFirst = Str::plural(ucfirst($json['model'])); //Posts
+        $form = self::createForm($singular, $json['fields']);
+        $scripts = self::createWyswigScripts($json['fields']);
 
-    function createTemplate()
-    {
-        return $this->render([
-            "##singular##" => $this->singular,
-            "##plural##" => $this->plural,
-            '##singular|ucfirst##' => $this->singularUppercase,
-            "##form##" => $this->createForm(),
-            "##scripts##" => $this->createWyswigScripts()
-        ],  $this->getStub(__DIR__ .'/stubs/views/create.stub'));
-    }
-    
-    function saveTemplate(){
-        File::put(resource_path('views/admin/'.$this->plural.'/create.blade.php'), $this->createTemplate());
-    }
-    
-    public function init()
-    {
-        $this->saveTemplate();
+        $createTemplate = <<<EOD
+@extends('layouts.admin')
+
+@section('content')
+<div>
+    <div class="card">
+        <div class="card-header">
+            New {$singularUCFirst}
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ route('{$plural}.store') }}" enctype="multipart/form-data">
+                @csrf
+                $form
+                <button class="btn btn-primary btn-block mt-4" type="submit">Create</button>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection
+
+@section('scripts')
+{$scripts}
+@endsection
+EOD;
+        File::put(resource_path('views/admin/'.$plural.'/create.blade.php'), $createTemplate );        
     }
 }

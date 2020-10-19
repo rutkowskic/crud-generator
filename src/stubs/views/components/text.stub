@@ -1,4 +1,0 @@
-<div class="form-group">
-    <label for="##component|singular##">##component|singular|ucfirst##</label>
-    <input type="text" id="##component|singular##" class="form-control" name="##component|singular##" ##component|value## ##required##>
-</div>

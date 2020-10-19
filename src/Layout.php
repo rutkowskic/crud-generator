@@ -2,58 +2,115 @@
 
 namespace Rcoder\CrudGenerator;
 
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
-use Rcoder\CrudGenerator\Helpers;
+use Illuminate\Support\Str;
+use Rcoder\CrudGenerator\Stubs;
+use Rcoder\CrudGenerator\Engine;
+use Illuminate\Support\Facades\File;
 
-class Layout
-{
-    use Helpers;
+class Layout {
 
-    private $jsons;
-
-    private $file;
-
-    function __construct($jsons) 
+    static function createMenu($jsons)
     {
-        $this->jsons = $jsons;
-    }
+        $items = '';
 
-    function createAdminMenu()
-    {
-        $list = '';
+        foreach($jsons as $json){
+            $singular = Str::singular(strtolower($json['model'])); //post
+            $plural = Str::plural(strtolower($json['model'])); //posts
+            $singularUCFirst = Str::singular(ucfirst($json['model'])); //Post
+            $pluralUCFirst = Str::plural(ucfirst($json['model'])); //Posts
 
-        foreach($this->jsons as ['model' => $model])
-        {
-            $pluralUppercase = ucfirst(Str::plural($model));
-            $list .= "<li><a href=\"{{ route('{$model}.index') }}\">{$pluralUppercase}</a></li>\n";
+            $items .= "<li><a href=\"{{ route('".$plural.".index') }}\">".$pluralUCFirst."</a></li>";
         }
 
-        return $list;
+        return rtrim($items, "\n");
 
-    }
-
-    function createAdminLayout()
-    {
-        $stub = $this->getStub(__DIR__ .'/stubs/views/layouts/admin.stub');
-
-        return $this->render(array(
-            '##menu##' => $this->createAdminMenu()
-        ), $stub);
     }
     
-    function saveAdminLayout()
+    static function init($jsons)
     {
-        if(!File::exists(resource_path('views/layouts'))){
-            File::makeDirectory(resource_path('views/layouts'));
-        }
-        File::put( resource_path('views/layouts/admin.blade.php'), $this->createAdminLayout() );
-    }
-
-    public function init()
-    {
-        $this->saveAdminLayout();
-    }
+        $createMenu = self::createMenu($jsons);
+        $adminTemplate = <<<EOT
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <title>{{ config('app.name') }}</title>
+</head>
+<body>
+    <div id="app">
     
+        <nav class="navbar navbar-expand-md navbar-light bg-white shadow-sm">
+            <div class="container">
+                <a class="navbar-brand" href="{{ url('/') }}">
+                    {{ config('app.name') }}
+                </a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav ml-auto">
+                        @guest
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('login') }}">{{ __('Login') }}</a>
+                            </li>
+                            @if (Route::has('register'))
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('register') }}">{{ __('Register') }}</a>
+                                </li>
+                            @endif
+                        @else
+                            <li class="nav-item dropdown">
+                                <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
+                                    Admin <span class="caret"></span>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                                    <a class="dropdown-item" href="{{ route('logout') }}"
+                                       onclick="event.preventDefault();
+                                                     document.getElementById('logout-form').submit();">
+                                        {{ __('Logout') }}
+                                    </a>
+
+                                    <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                                        @csrf
+                                    </form>
+                                </div>
+                            </li>
+                        @endguest
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <main class="py-4">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-3">
+                        <ul class="list-unstyled">
+                            {$createMenu}
+                        </ul>
+                    </div>
+                    <div class="col-md-9">
+                        @yield('content')
+                    </div>
+                </div>
+            </div>
+        </main>
+
+    </div>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+@yield('scripts') 
+</body>
+</html>
+EOT;
+
+        Helpers::makeDirectory(resource_path('views/layouts'));
+        File::put( resource_path('views/layouts/admin.blade.php'), $adminTemplate );
+    }
 }

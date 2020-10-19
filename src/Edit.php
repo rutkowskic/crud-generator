@@ -2,142 +2,48 @@
 
 namespace Rcoder\CrudGenerator;
 
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
+use Rcoder\CrudGenerator\Stubs;
 use Rcoder\CrudGenerator\Helpers;
+use Illuminate\Support\Facades\File;
 
 class Edit {
 
-    use Helpers;
-    
-    private $json;
+    use Stubs;
 
-    private $singular;
-    
-    private $singularUppercase;
-    
-    private $plural;
-    
-    private $pluralUppercase;
-
-    private $fields;
-    
-    function __construct($json) 
-    {
-        ['model' => $model, 'fields' => $fields] = $json;
-        $this->json = $json;
-        $this->singular = Str::singular(strtolower($model));
-        $this->singularUppercase = Str::singular(ucfirst($model));
-        $this->plural = Str::plural(strtolower($model));
-        $this->pluralUppercase = Str::plural(ucfirst($model));
-        $this->fields = $fields;
-    }
-    
-    function createSelectProporties($relation)
-    {
-        ['model' => $model, 'select' => $select] = $relation;
-        if(array_key_exists("where" , $select)){
-            $where = explode("|", $select['where']);
-            return "\$".Str::singular(strtolower($model))."->".$where[0]."->where('".$where[1]."', '".$where[2]."')->first()->pivot->".$select['name'];
-        }
-        return "\$".Str::singular(strtolower($model)) . "->" .  $select['name'];
-    }
-
-    function createRelationForm($relation, $type)
-    {
-        
-        $form = '';
-        
-        if(array_key_exists('fields', $relation)){
-            ['model' => $relationModel, 'fields' => $relationFields] = $relation;
-            foreach($relationFields as ['name' => $fieldName, 'type' => $fieldType]){
-    
-                $path = __DIR__ .'/stubs/views/components/'.$fieldType.'.stub';
-                $value = "{{ isset($" . Str::singular($relationModel) . "->pivot->" . Str::singular($fieldName) . ") ? $". Str::singular($relationModel) . "->pivot->". Str::singular($fieldName) . ": '' }}";
-                $stub = $this->getStub($path);
-    
-                $form .= $this->render(array(
-                    "##component|singular##" => Str::singular(strtolower($fieldName)),
-                    "##component|plural|ucfirst##" => Str::plural(ucfirst($fieldName)),
-                    '##component|singular|ucfirst##' => Str::singular(ucfirst($fieldName)),
-                    "##component|value##" => $fieldType == 'textarea' ? $value : "value=\"{$value}\"",
-                    '##required##' => ''
-                ), $stub);
-    
-                $form .= "\n";
-            }
-
-        }
-
-        return $form;
-    }
-
-    function createPivotTableElements($relation)
-    {
-        ['model' => $model, 'fields' => $fields] = $relation;
-        $theads = "";
-        $tbodys = "";
-
-        foreach($this->getWhenKeyIsBool($fields, 'active') as $active){
-            $theads .= "<th scope='col'>" . Str::singular(ucfirst($active['name'])) . "</th>\n";
-            $tbodys .= "<td scope='row'>{{\$". Str::singular(strtolower($model)) ."->pivot->". Str::singular(strtolower($active['name'])) ."}}</td>\n";
-        } 
-
-        return ['theads' => $theads, 'tbodys' => $tbodys];
-    }
-
-    function createRelationTd($relation)
-    {
-        ['model' => $model, 'select' => $select] = $relation;
-        if(array_key_exists("where" , $select)){
-            $where = explode("|", $select['where']);
-            return "<td scope='col'>{{\$".Str::singular(strtolower($model))."->".$where[0]."->where('".$where[1]."', '".$where[2]."')->first()->pivot->".$select['name'] ."}}</td>\n";
-        }
-        return "<td scope='col'>{{\$". Str::singular(strtolower($relation['model'])) ."->". Str::singular(strtolower($relation['select']['name'])) ."}}</td>\n"; 
-    }
-
-    function relationEditBUtton($relation)
-    {
-        if(array_key_exists('fields', $relation)){
-            return "<button type=\"button\" class=\"btn btn-primary btn-sm\" data-toggle=\"modal\" data-target=\"#".Str::plural(strtolower($relation['model']))."-{{\$".Str::singular(strtolower($relation['model']))."->id}}\">Edit</button>";
-        }
-        return '';
-    }
-
-    function createRelations()
+    static function createRelations($singular, $plural, $json)
     {
         $relations = '';
-        if(array_key_exists("relations", $this->json)){
-            foreach ($this->json['relations'] as $relation) {
-                $path = __DIR__ .'/stubs/views/'.$relation['type'].'.stub';
+        if(array_key_exists("relations", $json)){
+            foreach($json['relations'] as $relation) {
+                $relationSingular = Str::singular(strtolower($relation['model']));
+                $relationPlural = Str::plural(strtolower($relation['model']));
+                $relationSingularUCFirst = Str::singular(ucfirst($relation['model']));
+                $relationPluralUCFirst = Str::plural(ucfirst($relation['model']));
 
-                $stub = $this->getStub($path);
-
-                $relations .= $this->render(array(
-                    '##singular##' => $this->singular,
-                    "##plural##" => $this->plural,
-                    '##relation|singular##' => Str::singular(strtolower($relation['model'])),
-                    '##relation|plural##' => Str::plural(strtolower($relation['model'])),
-                    '##relation|singular|ucfirst##' => Str::singular(ucfirst($relation['model'])),
-                    '##relation|plural|ucfirst##' => Str::plural(ucfirst($relation['model'])),
-                    '##relationth##' => "<th scope='row'>" . Str::singular(ucfirst($relation['select']['name'])) . "</th>\n",
-                    '##relationtd##' => $this->createRelationTd($relation),
-                    '##relationEdit##' => $this->relationEditButton($relation),
-                    '##createRelationForm##' => $this->createRelationForm($relation, 'create'),
-                    '##updateRelationForm##' => $this->createRelationForm($relation, 'update'),
-                    '##relation|selectProporties##' => $this->createSelectProporties($relation)
-                ), $stub);
+                switch($relation['type']) {
+                    case "onetoone":
+                        $relations .= OneToOne::init($singular, $plural, $relationSingular, $relationPlural, $relationSingularUCFirst, $relationPluralUCFirst, $relation);
+                        break;
+                    case "onetomany":
+                        $relations .= OneToMany::init($singular, $plural, $relationSingular, $relationPlural, $relationSingularUCFirst, $relationPluralUCFirst, $relation, $json);
+                        break;
+                    case "manytomany":
+                        $relations .= ManyToMany::init($singular, $plural, $relationSingular, $relationPlural, $relationSingularUCFirst, $relationPluralUCFirst, $relation);
+                        break;
+                }
+                $relations .= "\n";
             } 
         }
-        return $relations;
+        return rtrim($relations, "\n");
     }
 
-    function createWyswigScripts()
+    static function createWyswigScripts($fields)
     {
         $scripts = '';
 
-        $objectsWhichNeedScript = $this->getWhenKeyIsBool($this->fields, "wyswig");
+        $objectsWhichNeedScript = Helpers::getWhenKeyIsTrue($fields, "wyswig");
 
         if(!empty($objectsWhichNeedScript))
         {
@@ -155,59 +61,81 @@ class Edit {
         return $scripts;
     }
 
-    function createForm()
+    static function createForm($singular, $fields)
     {
         $form = '';
 
-        foreach ($this->fields as $field) {
-            $path = __DIR__ .'/stubs/views/components/'.$field['type'].'.stub';
+        foreach ($fields as $field) {
             $value;
-            $stub = $this->getStub($path);
 
             switch ($field['type']) {
                 case "number":
-                    $value = "value={{\$". $this->singular ."->". Str::singular(strtolower($field['name'])) . " ?? 0}}";
+                    $value = "value={{\$". $singular ."->". Str::singular(strtolower($field['name'])) . " ?? 0}}";
                     break;
                 case "textarea":
-                    $value = "{{\$". $this->singular ."->". Str::singular(strtolower($field['name'])) . " ?? \"\"}}";
+                    $value = "{{\$". $singular ."->". Str::singular(strtolower($field['name'])) . " ?? \"\"}}";
                     break;
                 default:
-                    $value = "value={{\$". $this->singular ."->". Str::singular(strtolower($field['name'])) . " ?? \"\"}}";
+                    $value = "{{\$". $singular ."->". Str::singular(strtolower($field['name'])) . " ?? \"\"}}";
             }
 
-            $form .= $this->render(array(
-                '##singular##' => $this->singular,
-                '##component|singular##' => Str::singular(strtolower($field['name'])),
-                '##component|singular|ucfirst##' => Str::singular(ucfirst($field['name'])),
-                '##component|value##' => $value,
-                '##required##' => Arr::get($field, 'required', false) ? 'required' : ''
-            ), $stub);
+            $componentSingular = Str::singular(strtolower($field['name']));
+            $componentSingularUCFirst = Str::singular(ucfirst($field['name']));
+            $componentValue = $value;
+            $required = Arr::get($field, 'required', false) ? 'required' : '';
+
+            $form .= self::{$field['type']}($singular, $componentSingular, $componentSingularUCFirst, $componentValue, $required);
 
             $form .= "\n";
         }
 
-        return $form;
+        return rtrim($form, "\n");
     }
 
-    function createTemplate()
+    static public function init($json)
     {
-        return $this->render([
-            "##singular##" => $this->singular,
-            "##plural##" => $this->plural,
-            '##singular|ucfirst##' => $this->singularUppercase,
-            "##form##" => $this->createForm(),
-            "##relations##" => $this->createRelations(),
-            "##scripts##" => $this->createWyswigScripts()
-        ],  $this->getStub(__DIR__ .'/stubs/views/edit.stub'));
-    }
+        $singular = Str::singular(strtolower($json['model']));
+        $plural = Str::plural(strtolower($json['model']));
+        $singularUCFirst = Str::singular(ucfirst($json['model']));
+        $pluralUCFirst = Str::plural(ucfirst($json['model']));
 
-    function saveEditTemplate()
-    {
-        File::put( resource_path('views/admin/'.$this->plural.'/edit.blade.php'), $this->createTemplate());
-    }
-    
-    public function init()
-    {
-        $this->saveEditTemplate();
+        $form = self::createForm($singular, $json['fields']);
+        $scripts = self::createWyswigScripts($json['fields']);
+        $relations = self::createRelations($singular, $plural, $json);
+
+        $editTemplate = <<<EOD
+@extends('layouts.admin')
+
+@section('content')
+<div>
+    <div class="card">
+        <div class="card-header">
+            Edit
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ route('{$plural}.update', ['{$singular}' => \${$singular}->id]) }}" accept-charset="UTF-8" enctype="multipart/form-data">
+                @csrf
+                @method('PATCH')
+                {$form}
+                <button class="btn btn-primary btn-block mt-4" type="submit">Update</button>
+            </form>
+        </div>
+    </div>
+    {$relations}
+    <div>
+    <form action="{{ route('{$plural}.destroy', ['{$singular}' => \${$singular}->id]) }}" method="post">
+        @csrf
+        @method('DELETE')
+        <button class="btn btn-danger btn-block" type="submit">Delete</button>
+    </form>
+    </div>
+</div>
+@endsection
+
+@section('scripts')
+{$scripts}
+@endsection
+EOD;
+        File::put(resource_path('views/admin/'.$plural.'/edit.blade.php'), $editTemplate );
     }
 }

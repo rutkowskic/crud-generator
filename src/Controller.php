@@ -2,173 +2,239 @@
 
 namespace Rcoder\CrudGenerator;
 
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
+use Rcoder\CrudGenerator\Stubs;
 use Rcoder\CrudGenerator\Helpers;
+use Illuminate\Support\Facades\File;
+use Rcoder\CrudGenerator\ControllerStubs;
 
 class Controller {
 
-    use Helpers;
+    use ControllerStubs;
 
-    private $json;
-
-    private $singular;
-    
-    private $singularUppercase;
-    
-    private $plural;
-    
-    private $pluralUppercase;
-
-    private $fields;
-    
-    function __construct($json) 
-    {
-        ['model' => $model, 'fields' => $fields] = $json;
-        $this->json = $json;
-        $this->singular = Str::singular(strtolower($model)); //post
-        $this->singularUppercase = Str::singular(ucfirst($model)); //Post
-        $this->plural = Str::plural(strtolower($model)); //posts
-        $this->pluralUppercase = Str::plural(ucfirst($model)); //Posts
-        $this->fields = $fields;
-    }
-
-    public function relationFields($relation)
-    {
-        if(array_key_exists("fields", $relation)){
-            $namesOfFields = array_column($relation['fields'], 'name');
-            return ", \$request->only('". implode("', '", $namesOfFields) ."')";
-        }
-        return "";
-    }
-
-    public function createRelations()
+    static public function createRelations($singular, $plural, $singularUCFirst, $pluralUCFirst, $json)
     {
        $relations = '';
-       if(array_key_exists("relations", $this->json)){
-           foreach($this->json['relations'] as $relation){
+       if(array_key_exists("relations", $json)){
+           foreach($json['relations'] as $relation){
             ['model' => $model, 'type' => $type] = $relation;
-               $path = __DIR__.'/stubs/controller/'.$type.'.stub';
-               $stub = $this->getStub($path); 
-               $relations .= $this->render(array(
-                   '##plural##' => $this->plural,
-                   '##singular##' => $this->singular, 
-                   '##plural|ucfirst##' => $this->pluralUppercase,
-                   '##singular|ucfirst##' => $this->singularUppercase,
-                   "##relation|singular##" => Str::singular($model),
-                   "##relation|singular|ucfirst##" => Str::singular(ucfirst($model)),
-                   "##relation|plural##" => Str::plural(strtolower($model)),
-                   '##relation|fields##' => $this->relationFields($relation)
-               ), $stub);
-               $relations .= "\n";
+                $relationSingular = Str::singular($model);
+                $relationSingularUCFirst = Str::singular(ucfirst($model));
+                $relationPlural = Str::plural(strtolower($model));
+                $relations .= self::{$type}($singular, $plural, $singularUCFirst, $pluralUCFirst, $relationSingular, $relationSingularUCFirst, $relationPlural, $relation);
+                $relations .= "\n";
            }
        }
        return $relations;
     }
 
-    public function createRelationModels()
+    static public function oneToOneRelations($json)
     {
         $relations = '';
-        if(array_key_exists("relations", $this->json)){
-            foreach($this->json['relations'] as ['model' => $model, 'select' => $select]){
-                if(array_key_exists("where", $select)){
-                    $with = explode("|", $select['where']);
-                    return $relations .= "$".Str::plural(strtolower($model))." = ".Str::singular(ucfirst($model))."::with('". Str::plural(strtolower($with[0])) ."')->get();\n";
-                }
-                $relations .= "$".Str::plural(strtolower($model))." = ".Str::singular(ucfirst($model))."::all();\n";
-            }
+        $relationHasWhereKey = collect($json['relations'])->filter(function ($value, $key) use ($relations){
+            return $value['type'] === 'onetoone' && array_key_exists("where", $value['select']);
+        })->groupBy(function ($item) use ($relations){
+            return $item['select']['where'];
+        })->all();
+        $relationHasNotWhereKey = collect($json['relations'])->filter(function ($value, $key) use ($relations){
+            return $value['type'] === 'onetoone' && !array_key_exists("where", $value['select']);
+        })->all();
+        foreach($relationHasWhereKey as $key => $value){
+            $with = explode("|", $key);
+            $models = collect($value)->implode('model', ', ');
+            $relations .= "\$oneToOne".ucfirst($with[0]).ucfirst($with[1]).ucfirst($with[2])." = ".Str::singular(ucfirst($with[0]))."::with(['".$models."'])->where('".$with[1]."', '".$with[2]."')->first();\n";
+        }
+        foreach($relationHasNotWhereKey as $value){
+            $relations .= "$".Str::plural(strtolower($value['model']))." = ".Str::singular(ucfirst($value['model']))."::all();\n";
         }
         return $relations;
     }
 
-    public function createImportModels()
+    static public function manyToManyRelations($json)
     {
-        $imports = '';
-        if(array_key_exists("relations", $this->json)){
-            foreach($this->json['relations'] as ['model' => $model]){
-                $imports .= "use App\\".Str::singular(ucfirst($model)).";\n";                
-            }
-        }
-        return $imports;
-    }
-
-    function createEditModel()
-    {
-        if(!empty($this->relations)){
-            return "$".$this->singular." = ".$this->singularUppercase."::with(['". implode("', '", $this->relationsModel) ."'])->where('id', $".$this->singular.")->first();";
-        };
-        return "\${$this->singular} = {$this->singularUppercase}::find(\${$this->singular});";
-    }
-
-    public function getFromFields($table, $key, $value)
-    {
-        return array_filter($table, function  ($item) use($key, $value){
-            return $item[$key] == $value;
+        $relations = '';
+        $models = collect($json['relations'])->filter(function ($value, $key) {
+            return $value['type'] === 'manytomany';
         });
-    }
-
-    public function filesTemplate($path)
-    {
-        $template = '';
-        foreach($this->getFromFields($this->fields, 'type', 'file') as ['name' => $name]){
-            $template .= $this->render(array(
-                '##plural##' => $this->plural,
-                '##singular##' => $this->singular,
-                '##name##' =>  Str::singular(strtolower($name))
-            ), $this->getStub($path));
-            $template .= "\n";
+        foreach($models->all() as $relation){
+            //change many to many relations where is where key
+            if(array_key_exists("where", $relation['select'])){
+                $with = explode("|", $relation['select']['where']);
+                $relations .= "$".Str::plural(strtolower($relation['model']))." = ".Str::singular(ucfirst($relation['model']))."::with('". Str::plural(strtolower($with[0])) ."')->get();\n";
+            }
+            $relations .= "$".Str::plural(strtolower($relation['model']))." = ".Str::singular(ucfirst($relation['model']))."::all();\n";
         }
-        return $template;
+        return rtrim($relations, "\n");
+    }
+    
+    static public function createImportModels($json)
+    {
+        $imports = collect($json['relations'])->reduce(function ($start, $relation) {
+            return $start . "use App\\".Str::singular(ucfirst($relation['model'])).";\n";
+        }, '');
+        return rtrim($imports, "\n");
     }
 
-    public function createEditCompact()
+    static public function createEditCompact($json)
     {
-        if(array_key_exists("relations", $this->json)){
-            $pluck = Arr::pluck($this->json['relations'], 'model');
-            return ", '" . implode("', '", $pluck) . "'";
+        $variables = '';
+
+        $oneToOne = collect($json['relations'])->filter(function ($value, $key) {
+            return $value['type'] === 'onetoone' && array_key_exists("where", $value['select']);
+        })->groupBy(function ($item){
+            return $item['select']['where'];
+        })->keys();
+   
+        foreach($oneToOne as $key => $value){
+            $with = explode("|", $value);
+            $variables .= "'oneToOne".ucfirst($with[0]).ucfirst($with[1]).ucfirst($with[2])."', ";
         }
-        return '';
+
+        $variables .= collect($json['relations'])->filter(function ($value, $key){
+            return $value['type'] === 'onetoone' && !array_key_exists("where", $value['select']);
+        })->reduce(function ($start, $item) {
+            return $start ."'".$item['model']."', ";
+        }, '');
+
+        $variables .= collect($json['relations'])->filter(function ($value, $key) {
+            return $value['type'] === 'manytomany' && !array_key_exists("where", $value['select']);
+        })->reduce(function ($start, $item) {
+            return $start ."'".$item['model']."', ";
+        }, '');
+
+        return rtrim($variables, ', ');
     }
 
-    public function createIndexModel()
+    static function createEditModel($singular, $plural, $singularUCFirst, $json)
     {
-        if(array_key_exists('index', $this->json)){
-            $where = explode("|", $this->json['index']['where']);
-            return "\$".$this->plural." = ".$this->singularUppercase."::with('".Str::plural(strtolower($where[0]))."')->latest()->paginate(25);";
+        if(!empty($json['relations'])){
+            $models = collect($json['relations'])->filter(function ($value, $key) {
+                return $value['type'] === 'manytomany';
+            })->reduce(function ($start, $item) {
+                return $start ."'".$item['model']."',";
+            }, '');
+            return "$".$singular." = ".$singularUCFirst."::with([". rtrim($models, ',') ."])->where('id', $".$singular.")->first();";
+        };
+        return "$" .$singular. " = " .$singularUCFirst. "::find(" .$singular. ");";
+    }
+
+    static private function createFileTemplates($singular, $plural, $json)
+    {
+        $createFiles = '';
+        $updateFiles = '';
+        $deleteFiles = '';
+
+        foreach(Helpers::getFromFields($json['fields'], 'type', 'file') as ['name' => $name]){
+            $createFiles .= <<<EOD
+            if (\$request->hasFile('{$name}')) {
+                \$data['{$name}'] = \$request->file('{$name}')->store('{$plural}');
+            }
+            EOD;
+            $updateFiles .= <<<EOD
+            if (\$request->hasFile('{$name}')) {
+                \$data['{$name}'] = \$request->file('{$name}')->store('{$plural}');
+                Storage::delete(\${$singular}->{$name});
+            }
+            EOD;
+            $deleteFiles .= <<<EOD
+            Storage::delete(\${$singular}->{$name});
+            EOD;
         }
-        return "\$".$this->plural." = ".$this->singularUppercase."::latest()->paginate(25);";
+
+        return [$createFiles, $updateFiles, $deleteFiles];
     }
 
-    public function createController()
+    static private function createIndexModel($singular, $plural, $singularUCFirst, $json)
     {
-        $controllerPath = __DIR__.'/stubs/controller/controller.stub';
-        $controllerStub = File::get( $controllerPath );
-
-        return $this->render(array(
-            '##plural##' => $this->plural,
-            '##singular##' => $this->singular,
-            '##plural|ucfirst##' => $this->pluralUppercase,
-            '##singular|ucfirst##' => $this->singularUppercase,
-            '##indexModel##' => $this->createIndexModel(),
-            '##createFiles##' => $this->filesTemplate(__DIR__.'/stubs/controller/createfile.stub'),
-            '##updateFiles##' => $this->filesTemplate(__DIR__.'/stubs/controller/updatefile.stub'),
-            '##deleteFiles##' => $this->filesTemplate(__DIR__.'/stubs/controller/deletefile.stub'),
-            '##editModel##' => $this->createEditModel(),
-            '##importModels##' => $this->createImportModels(),
-            '##relationModels##' => $this->createRelationModels(),
-            '##editCompact##' => $this->createEditCompact(),
-            '##relations##' => $this->createRelations()
-        ), $controllerStub);
+        if(array_key_exists('index', $json)){
+            $where = explode("|", $json['index']['where']);
+            return "\$".$plural." = ".$singularUCFirst."::with('".Str::plural(strtolower($where[0]))."')->latest()->paginate(25);";
+        }
+        return "\$".$plural." = ".$singularUCFirst."::latest()->paginate(25);";
     }
 
-    public function saveController()
+    static public function init($json)
     {
-        File::put(app_path('Http/Controllers/Admin/' . $this->singularUppercase . 'Controller.php'), $this->createController());
+        $singular = Str::singular(strtolower($json['model']));
+        $plural = Str::plural(strtolower($json['model']));
+        $singularUCFirst = Str::singular(ucfirst($json['model']));
+        $pluralUCFirst = Str::plural(ucfirst($json['model']));
+        $indexModel = self::createIndexModel($singular, $plural, $singularUCFirst, $json);
+        [$createFiles, $updateFiles, $deleteFiles] = self::createFileTemplates($singular, $plural, $json);
+
+        $editModel = self::createEditModel($singular, $plural, $singularUCFirst, $json);
+        $importModels = self::createImportModels($json);
+        $oneToOneRelations = self::oneToOneRelations($json);
+        $manyToManyRelations = self::manyToManyRelations($json);
+        $editCompact = self::createEditCompact($json);
+        $relations = self::createRelations($singular, $plural, $singularUCFirst, $pluralUCFirst, $json);
+
+        $controllerTemplate = <<<EOD
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use App\\{$singularUCFirst};
+{$importModels}
+
+class {$singularUCFirst}Controller extends Controller
+{   
+    public function index()
+    {
+        {$indexModel}
+        return view('admin.{$plural}.index', compact('{$plural}'));
     }
 
-    public function init()
+    public function create()
     {
-        $this->saveController();
+        return view('admin.{$plural}.create');
+    }
+
+    public function store(Request \$request)
+    {
+        \$data = \$request->all();
+        {$createFiles}
+        {$singularUCFirst}::create(\$data);
+        return redirect('admin/{$plural}')->with('flash_message', '{$singularUCFirst} added!');
+    }
+
+    public function show({$singularUCFirst} \${$singular})
+    {
+        return view('admin.{$plural}.show', compact('{$singular}'));
+    }
+
+    public function edit(\${$singular})
+    {
+        {$editModel}
+        {$oneToOneRelations}
+        {$manyToManyRelations}
+        return view('admin.{$plural}.edit', compact('{$singular}', {$editCompact}));
+    }
+
+    public function update(Request \$request, {$singularUCFirst} \${$singular})
+    {
+        \$data = \$request->all();
+        {$updateFiles}
+        \${$singular}->update(\$data);
+        return redirect('admin/{$plural}')->with('flash_message', '{$singularUCFirst} updated!');
+    }
+
+    public function destroy({$singularUCFirst} \${$singular})
+    {
+        {$deleteFiles}
+        \${$singular}->delete();
+        return redirect('admin/{$plural}')->with('flash_message', '{$singularUCFirst} deleted!');
+    }
+    
+    {$relations}
+}
+EOD;
+        Helpers::makeDirectory(app_path('Http/Controllers/Admin'));
+        File::put(app_path('Http/Controllers/Admin/' . $singularUCFirst . 'Controller.php'), $controllerTemplate );
     }
 }
+

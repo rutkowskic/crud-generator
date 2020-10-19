@@ -2,71 +2,63 @@
 
 namespace Rcoder\CrudGenerator;
 
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use Illuminate\Support\Arr;
 use Rcoder\CrudGenerator\Helpers;
+use Illuminate\Support\Facades\File;
+use Rcoder\CrudGenerator\RouteStubs;
 
 class Router {
 
-    use Helpers;
-    
-    private $jsons;
-    private $file;
+    use RouteStubs;
 
-    function __construct($jsons) 
-    {
-        $this->jsons = $jsons;
-    }
-
-    public function createRoutes(){
-        $resources = '';
-        foreach ($this->jsons as ['model' => $model]) {
-            $resources .= "Route::resource('".Str::plural(strtolower($model))."', '".Str::singular(ucfirst($model))."Controller');\n";
+    public static function createRoutes($jsons){
+        $routes = '';
+        foreach ($jsons as ['model' => $model]) {
+            $plural = Str::plural(strtolower($model));
+            $singularUCFirst = Str::singular(ucfirst($model));
+            $routes .= "Route::resource('".$plural."', '".$singularUCFirst."Controller');\n";
         }
-        return $resources;
+        return rtrim($routes, "\n");
     }
 
-    public function createRelationRoutes(){
+    public static function createRelationRoutes($jsons){
         $relationRoutes = '';
-
-        foreach($this->jsons as $json){
+        foreach($jsons as $json){
             if(array_key_exists("relations", $json)){
-                foreach($json['relations'] as ['model' => $relationModel, 'type' => $type]){
-                    $stub = $this->getStub(__DIR__ .'/stubs/routes/'.$type.'.stub');
-                    $relationRoutes .= $this->render(array(
-                        "##singular##" => Str::singular(strtolower($json['model'])),
-                        "##plural##" => Str::plural(strtolower($json['model'])),
-                        '##singular|ucfirst##' => Str::singular(ucfirst($json['model'])),
-                        '##plural|ucfirst##' => Str::plural(ucfirst($json['model'])),
-                        '##relation|singular##' => Str::singular(strtolower($relationModel)),
-                        '##relation|plural##' => Str::plural(strtolower($relationModel)),
-                        '##relation|singular|ucfirst##' => Str::singular(ucfirst($relationModel)),
-                        '##relation|plural|ucfirst##' => Str::plural(ucfirst($relationModel)),
-                    ), $stub);
+                foreach($json['relations'] as $relation){
+                    $singular = Str::singular(strtolower($json['model']));
+                    $plural = Str::plural(strtolower($json['model']));
+                    $singularUCFirst = Str::singular(ucfirst($json['model']));
+                    $pluralUCFirst = Str::plural(ucfirst($json['model']));
+                    $relationSingular = Str::singular(strtolower($relation['model']));
+                    $relationPlural = Str::plural(strtolower($relation['model']));
+                    $relationSingularUCFirst = Str::singular(ucfirst($relation['model']));
+                    $relationPluralUCFirst = Str::plural(ucfirst($relation['model']));
+                    $relationRoutes .= self::{$relation['type']}($singular, $plural, $singularUCFirst, $pluralUCFirst, $relationSingular, $relationPlural, $relationSingularUCFirst, $relationPluralUCFirst);
                     $relationRoutes .= "\n";
                 }
             }
         };
-
-        return $relationRoutes;
+        return rtrim($relationRoutes, "\n");
     }
 
-    public function getRoutes(){
-        $stub = $this->getStub(__DIR__ .'/stubs/routes/routes.stub');
-        
-        return $this->render(array(
-            "##routes##" => $this->createRoutes(),
-            "##relationRoutes##" => $this->createRelationRoutes()
-        ), $stub);
-    }
-
-    public function saveRoutes(){
-        file_put_contents(base_path('routes/web.php'), PHP_EOL . $this->getRoutes(), FILE_APPEND);
-    }
-
-    public function init()
+    public static function init($jsons)
     {
-        $this->saveRoutes();
+        $routes = self::createRoutes($jsons);
+        $relationRoutes = self::createRelationRoutes($jsons);
+        
+        $stubRoutes = <<<EOT
+Route::prefix('admin')->group(function () {
+    Route::group(['namespace' => 'Admin'], function () {
+        Route::get('/', function(){
+            return view('admin.dashboard');
+        })->name('dashboard');
+        {$routes}
+        {$relationRoutes}
+    });
+    Auth::routes();
+});
+EOT;
+        file_put_contents(base_path('routes/web.php'), PHP_EOL . $stubRoutes, FILE_APPEND);
     }
 }
