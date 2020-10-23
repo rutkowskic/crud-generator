@@ -21,18 +21,12 @@ class Edit {
                 $relationPlural = Str::plural(strtolower($relation['model']));
                 $relationSingularUCFirst = Str::singular(ucfirst($relation['model']));
                 $relationPluralUCFirst = Str::plural(ucfirst($relation['model']));
-
-                switch($relation['type']) {
-                    case "onetoone":
-                        $relations .= OneToOne::init($singular, $plural, $relationSingular, $relationPlural, $relationSingularUCFirst, $relationPluralUCFirst, $relation);
-                        break;
-                    case "onetomany":
-                        $relations .= OneToMany::init($singular, $plural, $relationSingular, $relationPlural, $relationSingularUCFirst, $relationPluralUCFirst, $relation, $json);
-                        break;
-                    case "manytomany":
-                        $relations .= ManyToMany::init($singular, $plural, $relationSingular, $relationPlural, $relationSingularUCFirst, $relationPluralUCFirst, $relation);
-                        break;
-                }
+                $relationsModel = [
+                    'onetoone' => 'OneToOne',
+                    'onetomany' => 'OneToMany',
+                    'manytomany' => 'ManyToMany'
+                ];
+                $relations .= call_user_func("Rcoder\\CrudGenerator\\". $relationsModel[strtolower($relation['type'])] . "::init", $singular, $plural, $relationSingular, $relationPlural, $relationSingularUCFirst, $relationPluralUCFirst, $relation, $json);
                 $relations .= "\n";
             } 
         }
@@ -66,22 +60,13 @@ class Edit {
         $form = '';
 
         foreach ($fields as $field) {
-            $value;
-
-            switch ($field['type']) {
-                case "number":
-                    $value = "value={{\$". $singular ."->". Str::singular(strtolower($field['name'])) . " ?? 0}}";
-                    break;
-                case "textarea":
-                    $value = "{{\$". $singular ."->". Str::singular(strtolower($field['name'])) . " ?? \"\"}}";
-                    break;
-                default:
-                    $value = "{{\$". $singular ."->". Str::singular(strtolower($field['name'])) . " ?? \"\"}}";
-            }
-
+            $values = [
+                'number' => "value={{\$". $singular ."->". Str::singular(strtolower($field['name'])) . " ?? 0}}",
+                'textarea' => "{{\$". $singular ."->". Str::singular(strtolower($field['name'])) . " ?? \"\"}}"
+            ];
             $componentSingular = Str::singular(strtolower($field['name']));
             $componentSingularUCFirst = Str::singular(ucfirst($field['name']));
-            $componentValue = $value;
+            $componentValue = $values[$field['type']] ?? "{{\$". $singular ."->". Str::singular(strtolower($field['name'])) . " ?? \"\"}}";
             $required = Arr::get($field, 'required', false) ? 'required' : '';
 
             $form .= self::{$field['type']}($singular, $componentSingular, $componentSingularUCFirst, $componentValue, $required);
