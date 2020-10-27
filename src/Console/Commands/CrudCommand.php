@@ -50,11 +50,9 @@ class CrudCommand extends Command
      */
     public function handle()
     {
-        $jsons = [];
-
         Helpers::makeDirectory(resource_path('views/admin'));
         Helpers::makeDirectory(app_path('Http/Controllers/Admin'));
-
+        $jsons = [];
         $folderContents = scandir( config('crud.jsons') );
         $files = array_diff($folderContents, array('.', '..'));
         foreach( $files as $file) {

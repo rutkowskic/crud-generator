@@ -76,6 +76,7 @@ class Index {
             @endforeach
         </tbody>
         </table>
+        {{\${$plural}->links()}}
     @endsection
 EOD;
         Helpers::makeDirectory(resource_path('views/admin/'.$plural));

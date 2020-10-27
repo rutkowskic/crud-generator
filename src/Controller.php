@@ -149,9 +149,9 @@ class Controller {
     {
         if(array_key_exists('index', $json)){
             $where = explode("|", $json['index']['where']);
-            return "\$".$plural." = ".$singularUCFirst."::with('".Str::plural(strtolower($where[0]))."')->latest()->paginate(25);";
+            return "\$".$plural." = ".$singularUCFirst."::with('".Str::plural(strtolower($where[0]))."')->latest()->paginate(10);";
         }
-        return "\$".$plural." = ".$singularUCFirst."::latest()->paginate(25);";
+        return "\$".$plural." = ".$singularUCFirst."::latest()->paginate(10);";
     }
 
     static public function init($json)
