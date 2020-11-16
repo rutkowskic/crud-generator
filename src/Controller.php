@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 use Rcoder\CrudGenerator\Stubs;
 use Rcoder\CrudGenerator\Helpers;
 use Illuminate\Support\Facades\File;
-use Rcoder\CrudGenerator\ControllerStubs;
+use Rcoder\CrudGenerator\Stubs\ControllerStubs;
 
 class Controller {
 
@@ -29,79 +29,46 @@ class Controller {
        return $relations;
     }
 
-    static public function oneToOneRelations($json)
+    static public function oneToOneRelations($relationsCollection)
     {
         $relations = '';
-        $relationHasWhereKey = collect($json['relations'])->filter(function ($value, $key) use ($relations){
-            return $value['type'] === 'onetoone' && array_key_exists("where", $value['select']);
-        })->groupBy(function ($item) use ($relations){
-            return $item['select']['where'];
-        })->all();
-        $relationHasNotWhereKey = collect($json['relations'])->filter(function ($value, $key) use ($relations){
-            return $value['type'] === 'onetoone' && !array_key_exists("where", $value['select']);
-        })->all();
-        foreach($relationHasWhereKey as $key => $value){
+        $relations .= $relationsCollection->filter(fn($value, $key) => $value['type'] === 'onetoone' && !array_key_exists("where", $value['select']))->reduce(fn($string, $value) => $string .= "$".Str::plural(strtolower($value['model']))." = ".Str::singular(ucfirst($value['model']))."::all();\n", '');
+        $relationWithWhereKey = $relationsCollection->filter(fn($value, $key) => $value['type'] === 'onetoone' && array_key_exists("where", $value['select']))->groupBy(fn ($item) => $item['select']['where']);
+        foreach($relationWithWhereKey as $key => $value){
             $with = explode("|", $key);
             $models = collect($value)->implode('model', ', ');
             $relations .= "\$oneToOne".ucfirst($with[0]).ucfirst($with[1]).ucfirst($with[2])." = ".Str::singular(ucfirst($with[0]))."::with(['".$models."'])->where('".$with[1]."', '".$with[2]."')->first();\n";
         }
-        foreach($relationHasNotWhereKey as $value){
-            $relations .= "$".Str::plural(strtolower($value['model']))." = ".Str::singular(ucfirst($value['model']))."::all();\n";
-        }
         return $relations;
     }
 
-    static public function manyToManyRelations($json)
+    static public function manyToManyRelations($relationsCollection)
     {
-        $relations = '';
-        $models = collect($json['relations'])->filter(function ($value, $key) {
-            return $value['type'] === 'manytomany';
-        });
-        foreach($models->all() as $relation){
-            //change many to many relations where is where key
-            if(array_key_exists("where", $relation['select'])){
-                $with = explode("|", $relation['select']['where']);
-                $relations .= "$".Str::plural(strtolower($relation['model']))." = ".Str::singular(ucfirst($relation['model']))."::with('". Str::plural(strtolower($with[0])) ."')->get();\n";
+        $relations = $relationsCollection->filter(fn($value, $key) => $value['type'] === 'manytomany')->reduce(function ($string, $value) {
+            if(array_key_exists("where", $value['select'])){
+                $with = explode("|", $value['select']['where']);
+                return $string .= "$".Str::plural(strtolower($value['model']))." = ".Str::singular(ucfirst($value['model']))."::with('". Str::plural(strtolower($with[0])) ."')->get();\n";
             }
-            $relations .= "$".Str::plural(strtolower($relation['model']))." = ".Str::singular(ucfirst($relation['model']))."::all();\n";
-        }
+            return $string .= "$".Str::plural(strtolower($value['model']))." = ".Str::singular(ucfirst($value['model']))."::all();\n";
+        }, '');
         return rtrim($relations, "\n");
     }
     
-    static public function createImportModels($json)
+    static public function createImportModels($relationsCollection)
     {
-        $imports = collect($json['relations'])->reduce(function ($start, $relation) {
-            return $start . "use App\\".Str::singular(ucfirst($relation['model'])).";\n";
-        }, '');
+        $imports = $relationsCollection->reduce(fn($string, $relation) => $string .= "use App\\". Str::singular(ucfirst($relation['model'])) . ";\n");
         return rtrim($imports, "\n");
     }
 
-    static public function createEditCompact($json)
+    static public function createEditCompact($relationsCollection)
     {
         $variables = '';
-
-        $oneToOne = collect($json['relations'])->filter(function ($value, $key) {
-            return $value['type'] === 'onetoone' && array_key_exists("where", $value['select']);
-        })->groupBy(function ($item){
-            return $item['select']['where'];
-        })->keys();
-   
-        foreach($oneToOne as $key => $value){
+        $variables .= $relationsCollection->filter(fn($value, $key) => $value['type'] === 'manytomany' && !array_key_exists("where", $value['select']))->reduce(fn($start, $item) => $start ."'".$item['model']."', ");
+        $variables .= $relationsCollection->filter(fn($value, $key) => $value['type'] === 'onetoone' && !array_key_exists("where", $value['select']))->reduce(fn($start, $value) => $start ."'".$value['model']."', ");
+        $variables .= $relationsCollection->filter(fn($value, $key) => $value['type'] === 'onetoone' && array_key_exists("where", $value['select']))->groupBy(fn($item) => $item['select']['where'])->keys()->reduce(function($string, $value){
             $with = explode("|", $value);
-            $variables .= "'oneToOne".ucfirst($with[0]).ucfirst($with[1]).ucfirst($with[2])."', ";
-        }
-
-        $variables .= collect($json['relations'])->filter(function ($value, $key){
-            return $value['type'] === 'onetoone' && !array_key_exists("where", $value['select']);
-        })->reduce(function ($start, $item) {
-            return $start ."'".$item['model']."', ";
-        }, '');
-
-        $variables .= collect($json['relations'])->filter(function ($value, $key) {
-            return $value['type'] === 'manytomany' && !array_key_exists("where", $value['select']);
-        })->reduce(function ($start, $item) {
-            return $start ."'".$item['model']."', ";
-        }, '');
+            return $string .= "'oneToOne".ucfirst($with[0]).ucfirst($with[1]).ucfirst($with[2])."', ";
+        });
 
         return rtrim($variables, ', ');
     }
@@ -109,11 +76,7 @@ class Controller {
     static function createEditModel($singular, $plural, $singularUCFirst, $json)
     {
         if(!empty($json['relations'])){
-            $models = collect($json['relations'])->filter(function ($value, $key) {
-                return $value['type'] === 'manytomany';
-            })->reduce(function ($start, $item) {
-                return $start ."'".$item['model']."',";
-            }, '');
+            $models = collect($json['relations'])->filter(fn($value, $key) => $value['type'] === 'manytomany')->reduce(fn($start, $item) => $start ."'".$item['model']."',");
             return "$".$singular." = ".$singularUCFirst."::with([". rtrim($models, ',') ."])->where('id', $".$singular.")->first();";
         };
         return "$" .$singular. " = " .$singularUCFirst. "::find(" .$singular. ");";
@@ -121,26 +84,27 @@ class Controller {
 
     static private function createFileTemplates($singular, $plural, $json)
     {
-        $createFiles = '';
-        $updateFiles = '';
-        $deleteFiles = '';
-
-        foreach(Helpers::getFromFields($json['fields'], 'type', 'file') as ['name' => $name]){
-            $createFiles .= <<<EOD
-            if (\$request->hasFile('{$name}')) {
-                \$data['{$name}'] = \$request->file('{$name}')->store('{$plural}');
+        $fileFields = collect($json['fields'])->filter(fn($value, $key) => $value['type'] === 'file');
+        $createFiles = $fileFields->reduce(function($start, $item) use ($plural){ 
+            $start .= <<<EOD
+            if (\$request->hasFile('{$item['name']}')) {
+                \$data['{$item['name']}'] = \$request->file('{$item['name']}')->store('{$plural}');
             }
             EOD;
-            $updateFiles .= <<<EOD
-            if (\$request->hasFile('{$name}')) {
-                \$data['{$name}'] = \$request->file('{$name}')->store('{$plural}');
-                Storage::delete(\${$singular}->{$name});
+        });
+        $updateFiles = $fileFields->reduce(function($start, $item) use ($singular, $plural){ 
+            $start .= <<<EOD
+            if (\$request->hasFile('{$item['name']}')) {
+                \$data['{$item['name']}'] = \$request->file('{$item['name']}')->store('{$plural}');
+                Storage::delete(\${$singular}->{$item['name']});
             }
             EOD;
-            $deleteFiles .= <<<EOD
-            Storage::delete(\${$singular}->{$name});
+        });
+        $deleteFiles = $fileFields->reduce(function($start, $item) use ($singular, $plural){ 
+            $start .= <<<EOD
+            Storage::delete(\${$singular}->{$item['name']});
             EOD;
-        }
+        });
 
         return [$createFiles, $updateFiles, $deleteFiles];
     }
@@ -162,12 +126,12 @@ class Controller {
         $pluralUCFirst = Str::plural(ucfirst($json['model']));
         $indexModel = self::createIndexModel($singular, $plural, $singularUCFirst, $json);
         [$createFiles, $updateFiles, $deleteFiles] = self::createFileTemplates($singular, $plural, $json);
-
-        $editModel = self::createEditModel($singular, $plural, $singularUCFirst, $json);
-        $importModels = self::createImportModels($json);
-        $oneToOneRelations = self::oneToOneRelations($json);
-        $manyToManyRelations = self::manyToManyRelations($json);
-        $editCompact = self::createEditCompact($json);
+        $relationsCollection = collect($json['relations']);
+        $editModel = self::createEditModel($singular, $plural, $singularUCFirst, $json); 
+        $importModels = self::createImportModels($relationsCollection);
+        $oneToOneRelations = self::oneToOneRelations($relationsCollection); 
+        $manyToManyRelations = self::manyToManyRelations($relationsCollection); 
+        $editCompact = self::createEditCompact($relationsCollection); 
         $relations = self::createRelations($singular, $plural, $singularUCFirst, $pluralUCFirst, $json);
 
         $controllerTemplate = <<<EOD

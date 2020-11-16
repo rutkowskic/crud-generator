@@ -4,7 +4,7 @@ namespace Rcoder\CrudGenerator;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use Rcoder\CrudGenerator\Stubs;
+use Rcoder\CrudGenerator\Stubs\Stubs;
 
 class ManyToMany
 {
@@ -30,7 +30,6 @@ class ManyToMany
                 $required = '';
                 
                 $relationForm .= self::{$field['type']}($singular, $componentSingular, $componentSingularUCFirst, $componentValue, $required);
-                $relationForm .= "\n";
             }
         }
 
@@ -39,15 +38,9 @@ class ManyToMany
 
     static function createPivotTableElements($relation)
     {
-        ['model' => $model, 'fields' => $fields] = $relation;
-        $theads = "";
-        $tbodys = "";
-
-        foreach(Helpers::getWhenKeyIsTrue($fields, 'active') as $active){
-            $theads .= "<th scope='col'>" . Str::singular(ucfirst($active['name'])) . "</th>\n";
-            $tbodys .= "<td scope='row'>{{\$". Str::singular(strtolower($model)) ."->pivot->". Str::singular(strtolower($active['name'])) ."}}</td>\n";
-        } 
-
+        $activeFields = collect($relation['fields'])->filter(fn($value, $key) => isset($value['active']) && $value['active'] === true);
+        $theads = $activeFields->reduce(fn($start, $item) => $start .= "<th scope='col'>" . Str::singular(ucfirst($item['name'])) . "</th>\n");
+        $tbodys = $activeFields->reduce(fn($start, $item) => $start .= "<td scope='row'>{{\$". Str::singular(strtolower($relation['model'])) ."->pivot->". Str::singular(strtolower($item['name'])) ."}}</td>\n");
         return ['theads' => $theads, 'tbodys' => $tbodys];
     }
     

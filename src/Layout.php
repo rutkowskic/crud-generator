@@ -4,7 +4,6 @@ namespace Rcoder\CrudGenerator;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use Rcoder\CrudGenerator\Stubs;
 use Rcoder\CrudGenerator\Engine;
 use Illuminate\Support\Facades\File;
 
@@ -15,10 +14,10 @@ class Layout {
         $items = '';
 
         foreach($jsons as $json){
-            $singular = Str::singular(strtolower($json['model'])); //post
-            $plural = Str::plural(strtolower($json['model'])); //posts
-            $singularUCFirst = Str::singular(ucfirst($json['model'])); //Post
-            $pluralUCFirst = Str::plural(ucfirst($json['model'])); //Posts
+            $singular = Str::singular(strtolower($json['model'])); 
+            $plural = Str::plural(strtolower($json['model']));
+            $singularUCFirst = Str::singular(ucfirst($json['model']));
+            $pluralUCFirst = Str::plural(ucfirst($json['model']));
 
             $items .= "<li><a href=\"{{ route('".$plural.".index') }}\">".$pluralUCFirst."</a></li>";
         }

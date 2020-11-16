@@ -2,11 +2,11 @@
 
 namespace Rcoder\CrudGenerator;
 
-use Rcoder\CrudGenerator\Stubs;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Rcoder\CrudGenerator\Helpers;
 use Illuminate\Support\Facades\File;
+use Rcoder\CrudGenerator\Stubs\Stubs;
 
 class Create {
 
@@ -16,22 +16,15 @@ class Create {
     {
         $scripts = '';
 
-        $objectsWhichNeedScript = Helpers::getWhenKeyIsTrue($fields, "wyswig");
-
-        if(!empty($objectsWhichNeedScript))
+        if($fields->contains('wyswig', true))
         {
             $scripts .= '<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>';
         }
 
-        foreach($objectsWhichNeedScript as ['name' => $name, 'type' => $type])
-        {
-            if($type === 'textarea')
-            {
-                $scripts .= "\n<script>tinymce.init({selector:'#{$name}'});</script>";
-            }
-        }
+        $scripts .= $fields->filter(fn($value, $key) => isset($value['wyswig']) && $value['wyswig'] === true && $value['type'] === 'textarea')
+        ->reduce(fn($start, $item) => $start .= "\n<script>tinymce.init({selector:'#{$item['name']}'});</script>\n");
 
-        return $scripts;
+        return rtrim($scripts, "\n");
     }
 
     static function createForm($singular, $fields)
@@ -44,7 +37,6 @@ class Create {
             $componentValue = '';
             $required = Arr::get($field, 'required', false) ? 'required' : '';
             $form .= self::{$field['type']}($singular, $componentSingular, $componentSingularUCFirst, $componentValue, $required);
-            $form .= "\n";
         }
 
         return rtrim($form, "\n");
@@ -52,12 +44,12 @@ class Create {
     
     static public function init($json)
     {
-        $singular = Str::singular(strtolower($json['model'])); //post
-        $plural = Str::plural(strtolower($json['model'])); //posts
-        $singularUCFirst = Str::singular(ucfirst($json['model'])); //Post
-        $pluralUCFirst = Str::plural(ucfirst($json['model'])); //Posts
+        $singular = Str::singular(strtolower($json['model']));
+        $plural = Str::plural(strtolower($json['model']));
+        $singularUCFirst = Str::singular(ucfirst($json['model']));
+        $pluralUCFirst = Str::plural(ucfirst($json['model']));
         $form = self::createForm($singular, $json['fields']);
-        $scripts = self::createWyswigScripts($json['fields']);
+        $scripts = self::createWyswigScripts(collect($json['fields']));
 
         $createTemplate = <<<EOD
 @extends('layouts.admin')

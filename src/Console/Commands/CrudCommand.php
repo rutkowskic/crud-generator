@@ -60,7 +60,8 @@ class CrudCommand extends Command
             array_push($jsons, json_decode($model, true) ); 
         };
         foreach( $jsons as $json) {
-            Index::init($json);
+            $collectionJson = collect($json);
+            Index::init($collectionJson);
             Controller::init($json);
             Create::init($json);
             Edit::init($json);

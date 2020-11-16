@@ -12,28 +12,28 @@ class Index {
     static public function createTbodys($singular, $json){
         $tbodys = "";
 
-        if(array_key_exists('index', $json)){
+        if($json->has('index')){
             $where = explode("|", $json['index']['where']);
             $tbodys .= "<td scope=\"row\">{{isset(\$".$singular."->".Str::plural(strtolower($where[0]))."->where('".Str::singular(strtolower($where[1]))."', '".Str::singular(strtolower($where[2]))."')->first()->pivot) ? \$".$singular."->".Str::plural(strtolower($where[0]))."->where('".Str::singular(strtolower($where[1]))."', '".Str::singular(strtolower($where[2]))."')->first()->pivot->".$json['index']['name']." : ''}}</th>";
         }
 
-        foreach(Helpers::getWhenKeyIsTrue($json['fields'], 'active') as $active){
-            $tbodys .= "<td scope='row'>{{\$". $singular ."->". Str::singular(strtolower($active['name'])) ."}}</td>\n";
-        }
- 
+        $tbodys .= collect($json['fields'])
+        ->filter(fn($value, $key) => isset($value['active']) && $value['active'] === true)
+        ->reduce(fn($start, $item) => $start .= "<td scope='row'>{{\$". $singular ."->". Str::singular(strtolower($item['name'])) ."}}</td>\n");
+        
         return rtrim($tbodys, "\n");
     }
 
     static public function createTheads($json){
         $theads = "";
 
-        if(array_key_exists('index', $json)){
+        if($json->has('index')){
             $theads .= "<th scope=\"col\">".ucfirst($json['index']['name'])."</th>";
         }
-
-        foreach(Helpers::getWhenKeyIsTrue($json['fields'], 'active') as $active){
-            $theads .= "<th scope='col'>" . Str::singular(ucfirst($active['name'])) . "</th>\n";
-        }
+        
+        $theads .= collect($json['fields'])
+        ->filter(fn($value, $key) => isset($value['active']) && $value['active'] === true)
+        ->reduce(fn($start, $item) => $start .= "<th scope='col'>" . Str::singular(ucfirst($item['name'])) . "</th>\n");
 
         return rtrim($theads, "\n");
     }
@@ -44,8 +44,8 @@ class Index {
         $plural = Str::plural(strtolower($json['model']));
         $singularUCFirst = Str::singular(ucfirst($json['model']));
         $pluralUCFirst = Str::plural(ucfirst($json['model']));
-        $thead = self::createTheads($json);
-        $tbody = self::createTbodys($singular, $json);
+        $thead = self::createTheads(collect($json));
+        $tbody = self::createTbodys($singular, collect($json));
 
         $indexTemplate = <<<EOD
     @extends('layouts.admin')

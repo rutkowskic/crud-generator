@@ -4,9 +4,9 @@ namespace Rcoder\CrudGenerator;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use Rcoder\CrudGenerator\Stubs;
 use Rcoder\CrudGenerator\Helpers;
 use Illuminate\Support\Facades\File;
+use Rcoder\CrudGenerator\Stubs\Stubs;
 
 class Edit {
 
@@ -15,17 +15,17 @@ class Edit {
     static function createRelations($singular, $plural, $json)
     {
         $relations = '';
+        $relationsModel = [
+            'onetoone' => 'OneToOne',
+            'onetomany' => 'OneToMany',
+            'manytomany' => 'ManyToMany'
+        ];
         if(array_key_exists("relations", $json)){
             foreach($json['relations'] as $relation) {
                 $relationSingular = Str::singular(strtolower($relation['model']));
                 $relationPlural = Str::plural(strtolower($relation['model']));
                 $relationSingularUCFirst = Str::singular(ucfirst($relation['model']));
                 $relationPluralUCFirst = Str::plural(ucfirst($relation['model']));
-                $relationsModel = [
-                    'onetoone' => 'OneToOne',
-                    'onetomany' => 'OneToMany',
-                    'manytomany' => 'ManyToMany'
-                ];
                 $relations .= call_user_func("Rcoder\\CrudGenerator\\". $relationsModel[strtolower($relation['type'])] . "::init", $singular, $plural, $relationSingular, $relationPlural, $relationSingularUCFirst, $relationPluralUCFirst, $relation, $json);
                 $relations .= "\n";
             } 
@@ -37,22 +37,15 @@ class Edit {
     {
         $scripts = '';
 
-        $objectsWhichNeedScript = Helpers::getWhenKeyIsTrue($fields, "wyswig");
-
-        if(!empty($objectsWhichNeedScript))
+        if($fields->contains('wyswig', true))
         {
             $scripts .= '<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>';
         }
 
-        foreach($objectsWhichNeedScript as ['name' => $name, 'type' => $type])
-        {
-            if($type === 'textarea')
-            {
-                $scripts .= "\n<script>tinymce.init({selector:'#{$name}'});</script>";
-            }
-        }
+        $scripts .= $fields->filter(fn($value, $key) => isset($value['wyswig']) && $value['wyswig'] === true && $value['type'] === 'textarea')
+        ->reduce(fn($start, $item) => $start .= "\n<script>tinymce.init({selector:'#{$item['name']}'});</script>\n");
 
-        return $scripts;
+        return rtrim($scripts, "\n");
     }
 
     static function createForm($singular, $fields)
@@ -70,8 +63,6 @@ class Edit {
             $required = Arr::get($field, 'required', false) ? 'required' : '';
 
             $form .= self::{$field['type']}($singular, $componentSingular, $componentSingularUCFirst, $componentValue, $required);
-
-            $form .= "\n";
         }
 
         return rtrim($form, "\n");
@@ -85,7 +76,7 @@ class Edit {
         $pluralUCFirst = Str::plural(ucfirst($json['model']));
 
         $form = self::createForm($singular, $json['fields']);
-        $scripts = self::createWyswigScripts($json['fields']);
+        $scripts = self::createWyswigScripts(collect($json['fields']));
         $relations = self::createRelations($singular, $plural, $json);
 
         $editTemplate = <<<EOD

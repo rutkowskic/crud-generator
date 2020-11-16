@@ -1,6 +1,6 @@
 <?php
 
-namespace Rcoder\CrudGenerator;
+namespace Rcoder\CrudGenerator\Stubs;
 use Illuminate\Support\Str;
 
 trait ControllerStubs{

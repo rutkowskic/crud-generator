@@ -4,7 +4,7 @@ namespace Rcoder\CrudGenerator;
 
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use Rcoder\CrudGenerator\Stubs;
+use Rcoder\CrudGenerator\Stubs\Stubs;
 
 class OneToMany
 {
@@ -30,7 +30,6 @@ class OneToMany
                 $required = '';
             
                 $relationForm .= self::{$field['type']}($singular, $componentSingular, $componentSingularUCFirst, $componentValue, $required);
-                $relationForm .= "\n";
             }
         }
 

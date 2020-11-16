@@ -5,19 +5,14 @@ namespace Rcoder\CrudGenerator;
 use Illuminate\Support\Str;
 use Rcoder\CrudGenerator\Helpers;
 use Illuminate\Support\Facades\File;
-use Rcoder\CrudGenerator\RouteStubs;
+use Rcoder\CrudGenerator\Stubs\RouteStubs;
 
 class Router {
 
     use RouteStubs;
 
     public static function createRoutes($jsons){
-        $routes = '';
-        foreach ($jsons as ['model' => $model]) {
-            $plural = Str::plural(strtolower($model));
-            $singularUCFirst = Str::singular(ucfirst($model));
-            $routes .= "Route::resource('".$plural."', '".$singularUCFirst."Controller');\n";
-        }
+        $routes = $jsons->reduce(fn($start, $item) => "Route::resource('".Str::plural(strtolower($item['model']))."', '".Str::singular(ucfirst($item['model']))."Controller');\n");
         return rtrim($routes, "\n");
     }
 
@@ -44,8 +39,8 @@ class Router {
 
     public static function init($jsons)
     {
-        $routes = self::createRoutes($jsons);
-        $relationRoutes = self::createRelationRoutes($jsons);
+        $routes = self::createRoutes(collect($jsons));
+        $relationRoutes = self::createRelationRoutes(collect($jsons));
         
         $stubRoutes = <<<EOT
 Route::prefix('admin')->group(function () {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Rcoder\CrudGenerator;
+namespace Rcoder\CrudGenerator\Stubs;
 
 trait Stubs{
 
@@ -10,7 +10,7 @@ trait Stubs{
         <div class="form-group">
             <label for="{$componentSingular}">{$componentSingularUCFirst}</label>
             <input type="number" id="{$componentSingular}" class="form-control" name="{$componentSingular}" value="{$componentValue}" {$required}>
-        </div>
+        </div>\n
         EOD;
     }
 
@@ -20,7 +20,7 @@ trait Stubs{
         <div class="form-group">
             <label for="{$componentSingular}">{$componentSingularUCFirst}</label>
             <input type="file" id="{$componentSingular}" class="form-control-file" name="{$componentSingular}" value="{$componentValue}" {$required}>
-        </div>
+        </div>\n
         EOD;
     }
 
@@ -45,7 +45,7 @@ trait Stubs{
                 </div>
             </div>
             </div>
-        </fieldset>
+        </fieldset>\n
         EOD;
     }
 
@@ -55,7 +55,7 @@ trait Stubs{
         <div class="form-group">
             <label for="{$componentSingular}">{$componentSingularUCFirst}</label>
             <input type="text" id="{$componentSingular}" class="form-control" name="{$componentSingular}" value="{$componentValue}" {$required}>
-        </div>
+        </div>\n
         EOD;
     }
 
@@ -65,7 +65,7 @@ trait Stubs{
         <div class="form-group">
             <label for="{$componentSingular}">{$componentSingularUCFirst}</label>
             <textarea rows="9" id="{$componentSingular}" class="form-control" name="{$componentSingular}" {$required}>{$componentValue}</textarea>
-        </div>
+        </div>\n
         EOD;
     }
 
